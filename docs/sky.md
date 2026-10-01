@@ -125,7 +125,13 @@ Kindle in place of the sky. Its last line tells whoever unwraps it what to do: *
 the power button to see your sky*. That first press puts the letter away and the sky comes
 up; after that the button works as always. The letter is set as large as fits the screen,
 up to the size of the sky's own labels, and the script stops if it's too long to read
-from across a room. Run it again to put a letter back.
+from across a room.
+
+The letter isn't gone for good. Every year on the day it was first opened, it's back on
+the screen, and a press puts it away again. It's also in the Kindle's library as a book,
+*A letter for Sam*, to read any time after a second press of the power button hands the
+screen back to the Kindle. Run `gift.sh` again to wrap a new letter; its yearly day starts
+over from when that one is opened.
 
 ## Where the data comes from
 

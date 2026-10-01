@@ -5,6 +5,8 @@
 DIR="$(cd "$(dirname "$0")" && pwd)"
 PIDFILE=/tmp/planes.pid
 PY=/mnt/us/python/bin/python3.12
+# Reader-side services nothing here uses; KOReader stops this same set on PW4 5.18.1
+READER="stored webreader kfxreader kfxview todo tmd rcm archive scanner otav3 otaupd"
 
 # Set "key": "value" in config.json, adding it if it isn't there yet
 set_key() {
@@ -45,6 +47,10 @@ if [ "$1" = "stop" ]; then
     touch /tmp/planes.stopped
     lipc-set-prop com.lab126.powerd preventScreenSaver 0
     start lab126_gui
+    # The library and its books need these back (the gift's letter is one of them)
+    for svc in $READER; do
+        start "$svc" >/dev/null 2>&1
+    done
     exit 0
 fi
 
@@ -53,8 +59,7 @@ fi
 lipc-set-prop com.lab126.powerd preventScreenSaver 1
 lipc-set-prop com.lab126.cmd wirelessEnable 1
 stop lab126_gui 2>/dev/null
-# Reader-side services nothing here uses; KOReader stops this same set on PW4 5.18.1
-for svc in stored webreader kfxreader kfxview todo tmd rcm archive scanner otav3 otaupd; do
+for svc in $READER; do
     stop "$svc" >/dev/null 2>&1
 done
 sleep 3

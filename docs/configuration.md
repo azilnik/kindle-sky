@@ -48,7 +48,7 @@ set `planes/shore.json` to an empty list, `[]`.
   While the sky frame shows a gift letter, the first press opens the sky instead
   ([sky.md](sky.md#give-it-as-a-gift)).
 - **A second press** a few seconds later hands the screen back to the normal Kindle
-  interface. The display comes back on the next reboot.
+  interface, with its library and books. The display comes back on the next reboot.
 
 ## Two Kindles in one home
 

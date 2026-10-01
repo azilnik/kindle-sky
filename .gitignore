@@ -6,6 +6,7 @@ planes/orbits.csv*
 planes/balloon.json*
 planes/gift.txt
 planes/gift.seen
+planes/gift.date
 planes/power.log*
 planes/HOLD
 planes/DISABLED

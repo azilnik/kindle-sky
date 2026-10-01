@@ -1617,6 +1617,7 @@ def layout():
 # the power button. Put there by tools/gift.sh; never deployed, so a deploy can't bring it back
 GIFT_PATH = os.path.join(HERE, "gift.txt")
 GIFT_SEEN = os.path.join(HERE, "gift.seen")
+GIFT_DAY = os.path.join(HERE, "gift.date")  # the day it was first opened: the day it was given
 GIFT_NEXT = "Next: press the power button to see your sky"
 
 
@@ -1633,6 +1634,23 @@ def read_gift(path=None):
         text = text.replace(a, b)
     paras = [p.strip() for p in text.replace("\r", "").split("\n\n") if p.strip()]
     return paras or None
+
+
+def gift_returns(now):
+    """Every year on the day it was given, the letter is back on the screen. Opening it
+    stamps gift.seen with the time, so a day never brings it back twice."""
+    try:
+        with open(GIFT_DAY) as f:
+            given = f.read().strip()
+        opened = time.strftime("%Y-%m-%d", time.localtime(os.path.getmtime(GIFT_SEEN)))
+    except OSError:
+        return
+    today = time.strftime("%Y-%m-%d", time.localtime(now))
+    if given[5:] == today[5:] and opened < today:
+        try:
+            os.replace(GIFT_SEEN, GIFT_PATH)
+        except OSError:
+            pass
 
 
 def gift_lines(d, text, f, width):
@@ -1981,6 +1999,7 @@ class Frame:
         return max(60, self.next_due(now) - now)
 
     def render(self, now, fetched_at, note=None):
+        gift_returns(now)
         gift = read_gift()
         if gift:
             self.sky, self.log = {}, {"gift": 1}
@@ -1996,13 +2015,18 @@ class Frame:
 
     def pressed(self):
         """The first press of the power button opens the gift: the letter is put away
-        (gift.seen, for tools/gift.sh to bring back) and the sky takes its place."""
+        (gift.seen, until its day comes round again) and the sky takes its place."""
         if not os.path.exists(GIFT_PATH):
             return False
         try:
             os.replace(GIFT_PATH, GIFT_SEEN)
+            os.utime(GIFT_SEEN)
+            if not os.path.exists(GIFT_DAY):
+                with open(GIFT_DAY, "w") as f:
+                    f.write(time.strftime("%Y-%m-%d"))
         except OSError:
-            return False  # Drive Mode has /mnt/us; the press does what it always does
+            # Drive Mode has /mnt/us: unless the letter moved, the press does what it always does
+            return os.path.exists(GIFT_SEEN)
         return True
 
     def mood(self, now):
