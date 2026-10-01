@@ -1611,6 +1611,97 @@ def layout():
     DOME_Y = (SKY_BOX[1] + SKY_BOX[3]) // 2
 
 
+# ---------- a gift ----------
+
+# A letter to whoever unwraps the frame, shown in place of the sky until the first press of
+# the power button. Put there by tools/gift.sh; never deployed, so a deploy can't bring it back
+GIFT_PATH = os.path.join(HERE, "gift.txt")
+GIFT_SEEN = os.path.join(HERE, "gift.seen")
+GIFT_NEXT = "Next: press the power button to see your sky"
+
+
+def read_gift(path=None):
+    """Paragraphs split by blank lines: the first is the greeting, the last the sign-off
+    (kept line for line), the rest the letter. Typewriter quotes and dashes come out as
+    the real thing."""
+    try:
+        with open(path or GIFT_PATH, encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        return None
+    for a, b in (("'", "’"), (" - ", " — "), ("\n-", "\n— "), ("\n—  ", "\n— ")):
+        text = text.replace(a, b)
+    paras = [p.strip() for p in text.replace("\r", "").split("\n\n") if p.strip()]
+    return paras or None
+
+
+def gift_lines(d, text, f, width):
+    """Word-wrapped, never leaving one word alone on a paragraph's last line."""
+    words = text.split()
+    if len(words) > 2:
+        words[-2:] = [words[-2] + " " + words[-1]]
+    return [ln.replace(" ", " ") for ln, _ in P.wrap(d, " ".join(words), TF["light"], f.size, width)]
+
+
+def gift_rows(d, paras, n):
+    """The letter on a grid of n equal rows filling the text box: every baseline on a row,
+    every gap a whole empty row, the greeting two rows tall, and the last row for the Next
+    line, where every sky screen has it. None if it doesn't fit."""
+    top, bottom = P.TEXT[1], P.TEXT[3]
+    u = (bottom - top) / float(n)
+    body = P.font(TF["light"], int(round(u / 1.42)))
+    sign = P.font(TF["head"], int(round(u * 0.86)))
+    greet = P.font(TF["head"], int(round(u * 1.72)))
+    width = P.TEXT[2] - P.TEXT[0]
+    rows = [(2, paras[0], greet, HERO), (1, None, None, None)]
+    *letter, signoff = paras[1:] if len(paras) > 2 else paras[1:] + [""]
+    for i, para in enumerate(letter):
+        if i:
+            rows.append((1, None, None, None))
+        rows += [(1, ln, body, THING) for ln in gift_lines(d, " ".join(para.split()), body, width)]
+    if signoff:
+        rows.append((1, None, None, None))
+        for ln in signoff.split("\n"):
+            if P.text_w(d, ln, sign) > width:
+                return None
+            rows.append((1, ln.strip(), sign, HERO))
+    if P.text_w(d, paras[0], greet) > width or sum(r[0] for r in rows) > n - 2:
+        return None
+    return u, body, rows
+
+
+def render_gift(paras):
+    img = P.CANVAS = Image.new("L", (P.W, P.H), GROUND)
+    d = ImageDraw.Draw(img)
+    # The biggest type that fits: the fewest rows, but never a body bigger than the sky's
+    # own labels (44) nor smaller than what reads across a room (34)
+    fits = (gift_rows(d, paras, n) for n in range(12, 30))
+    fit = next((f for f in fits if f and NOTE.size <= f[1].size <= LABEL.size), None)
+    if not fit:
+        raise ValueError("the letter is too long for one screen")
+    u, body, rows = fit
+    # Each row's baseline sits where a capital of the body type is centered in it
+    base = (u + body.getbbox("H")[3] - body.getbbox("H")[1]) / 2.0
+    x, r = P.TEXT[0], 0
+    for span, s, f, fill in rows:
+        r += span
+        if s:
+            d.text((x, P.TEXT[1] + (r - 1) * u + base), s, font=f, fill=fill, anchor="ls")
+    # Beside the greeting, three stars in the dome's own marks: a bright one that twinkles
+    # and two smaller, joined as a constellation: the sky frame, signing the letter
+    if P.TEXT[2] - x - P.text_w(d, rows[0][1], rows[0][2]) > 3.4 * u:
+        cx, cy = P.TEXT[2] - 0.5 * u, P.TEXT[1] + 0.62 * u
+        stars = ((cx, cy), (cx - 1.25 * u, cy + 0.95 * u), (cx - 2.55 * u, cy + 0.55 * u))
+        d.line(stars, fill=FRAME, width=5, joint="curve")
+        for (sx, sy), rr in zip(stars[1:], (0.16 * u, 0.12 * u)):
+            d.ellipse((sx - rr - 6, sy - rr - 6, sx + rr + 6, sy + rr + 6), fill=GROUND)
+            d.ellipse((sx - rr, sy - rr, sx + rr, sy + rr), fill=THING)
+        icons.paste(img, icons.glyph("sparkle", int(u * 0.95), HERO, 0, 8), cx, cy, GROUND)
+    nf = P.fit_font(d, GIFT_NEXT, TF["name"], body.size, P.TEXT[2] - x, floor=30)
+    d.text((x, P.TEXT[3] - u + base), GIFT_NEXT, font=nf, fill=THING, anchor="ls")
+    return img
+
+
 # ---------- live data ----------
 
 CELESTRAK = "https://celestrak.org/NORAD/elements/gp.php?GROUP=%s&FORMAT=csv"
@@ -1791,8 +1882,6 @@ class Frame:
     every 10 minutes, or every minute while something crosses. At night (config "night")
     it fetches nothing and redraws at each half-hourly wake."""
 
-    idle_redraw_s = 600
-
     def __init__(self, args):
         self.args, self.log, self.fetch_log = args, {}, {}
         self.sky = {}
@@ -1892,9 +1981,29 @@ class Frame:
         return max(60, self.next_due(now) - now)
 
     def render(self, now, fetched_at, note=None):
+        gift = read_gift()
+        if gift:
+            self.sky, self.log = {}, {"gift": 1}
+            return render_gift(gift)
         img, self.sky = render(self.data(now), now, note)
         self.log = {"things": len(self.sky["things"])}
         return img
+
+    @property
+    def idle_redraw_s(self):
+        # A letter doesn't change: no redraws for it beyond the fetches
+        return None if os.path.exists(GIFT_PATH) else 600
+
+    def pressed(self):
+        """The first press of the power button opens the gift: the letter is put away
+        (gift.seen, for tools/gift.sh to bring back) and the sky takes its place."""
+        if not os.path.exists(GIFT_PATH):
+            return False
+        try:
+            os.replace(GIFT_PATH, GIFT_SEEN)
+        except OSError:
+            return False  # Drive Mode has /mnt/us; the press does what it always does
+        return True
 
     def mood(self, now):
         """Live while a pass or train crosses; soon when the headline is something on its way
@@ -1908,6 +2017,8 @@ class Frame:
         """What the screen says, with degrees to the nearest 5 so a Moon climbing a degree
         doesn't count as news (the 15-minute redraw catches it up), and what's on the dome.
         First the moment, whose change is worth a flash: the headline, and a balloon's burst."""
+        if not self.sky:
+            return ("gift",)  # the letter, which never changes
         h = self.sky["hero"]
         # A balloon bursting is a new moment, as good as a new headline
         moment = (h["head"], any(th["kind"] == "balloon" and not th["rising"] for th in self.sky["things"])
@@ -1935,7 +2046,7 @@ class Frame:
         return P.next_morning(now)
 
     def night_key(self, now, mode):
-        return mode + str(int(now // loop.NIGHT_WAKE_S))
+        return mode + str(int(now // loop.NIGHT_WAKE_S)) + ("gift" if os.path.exists(GIFT_PATH) else "")
 
     def render_night(self, now, mode):
         return self.render(now, 0, note="Battery low" if mode == "low" else None)
@@ -1952,6 +2063,7 @@ def main():
     ap.add_argument("--rotate", type=int, choices=(0, 90, 180, 270), help="clockwise turn onto the panel")
     ap.add_argument("--panel", help="preview another Kindle's panel, portrait WxH (758x1024 for a PW2)")
     ap.add_argument("--config", help="read this instead of the config.json beside sky.py")
+    ap.add_argument("--gift", help="preview this gift.txt instead of the sky")
     args = ap.parse_args()
     args.style = None
     if args.panel:
@@ -1961,6 +2073,10 @@ def main():
 
     if args.out:
         os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
+
+    if args.gift:
+        loop.turn(render_gift(read_gift(args.gift)), P.ROTATE).save(args.out or "/tmp/planes.pgm")
+        return
 
     if args.sample:
         with open(args.sample) as f:

@@ -31,7 +31,7 @@ fi
 # config.json and the files written at runtime stay on the device
 COPYFILE_DISABLE=1 tar cf - --exclude cache.json --exclude traffic.json --exclude 'tracks.json*' --exclude 'power.log*' \
     --exclude 'orbits.csv*' --exclude 'balloon.json*' --exclude __pycache__ --exclude samples --exclude make.py \
-    --exclude 'config*.json' --exclude HOLD . |
+    --exclude 'config*.json' --exclude HOLD --exclude 'gift.*' . |
     ssh "$KINDLE" 'cd /mnt/us/planes && tar xf -'
 if [ "$KEEP_HOLD" = "--hold" ]; then
     ssh "$KINDLE" 'touch /mnt/us/planes/HOLD'

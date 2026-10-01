@@ -45,6 +45,8 @@ set `planes/shore.json` to an empty list, `[]`.
 ## The power button
 
 - **One press** wakes the Kindle with Wi-Fi on for 10 minutes, so you can reach it over SSH.
+  While the sky frame shows a gift letter, the first press opens the sky instead
+  ([sky.md](sky.md#give-it-as-a-gift)).
 - **A second press** a few seconds later hands the screen back to the normal Kindle
   interface. The display comes back on the next reboot.
 

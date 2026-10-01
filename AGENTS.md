@@ -76,6 +76,8 @@ rule and already has its margin; its frames are pixel-identical either way.
   `/mnt/us/planes/HOLD` when done, or the battery drains.
 - Runtime files stay on the device and are gitignored: `cache.json`, `traffic.json`,
   `tracks.json`, `power.log`, and the sky frame's `orbits.csv` and `balloon.json`.
+- `tools/gift.sh letter.txt` leaves a letter (`gift.txt`) on the sky frame until the first
+  press of the power button, which renames it `gift.seen`. Deploys never carry either.
 - `"frame"` in the device's `config.json` picks `planes` or `sky`; `run.sh frame NAME` or
   `tools/deploy.sh --frame NAME` switches and restarts. Both frames always ship.
 - `tools/grid.sh` shows the test pattern for measuring `safe` and stops the loop to do it.

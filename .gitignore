@@ -4,6 +4,8 @@ planes/traffic.json
 planes/tracks.json*
 planes/orbits.csv*
 planes/balloon.json*
+planes/gift.txt
+planes/gift.seen
 planes/power.log*
 planes/HOLD
 planes/DISABLED

@@ -102,6 +102,31 @@ ssh kindle sh /mnt/us/planes/run.sh frame sky
 `run.sh frame planes` switches back. Both write `"frame"` in `config.json` and restart the
 display.
 
+## Give it as a gift
+
+The frame can open with a letter. Write it as plain text, paragraphs split by blank lines:
+the first is the greeting, the last the sign-off.
+
+```text
+Dear Sam,
+
+Happy birthday. You always look up first: at birds, at planes, at the Moon over the lake.
+
+Clear skies, always.
+- Jo
+```
+
+```bash
+tools/gift.sh letter.txt
+```
+
+This renders it to `out/gift.png` so you can see it, deploys, and leaves the letter on the
+Kindle in place of the sky. Its last line tells whoever unwraps it what to do: *Next: press
+the power button to see your sky*. That first press puts the letter away and the sky comes
+up; after that the button works as always. The letter is set as large as fits the screen,
+up to the size of the sky's own labels, and the script stops if it's too long to read
+from across a room. Run it again to put a letter back.
+
 ## Where the data comes from
 
 - Satellite orbits: [CelesTrak](https://celestrak.org), at most once every 20 hours. The

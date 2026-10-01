@@ -18,7 +18,9 @@ A frame is an object with:
     render_night(now, mode)  that picture; mode is "night", or "low" on a dying battery
 and `fetch_log` and `log`, dicts of fields for the power log's fetch and draw lines.
 Optionally `idle_redraw_s`: the longest a still picture waits for a redraw when the next
-fetch is further off than that (the sky turns even when nothing needs fetching). The loop
+fetch is further off than that (the sky turns even when nothing needs fetching), and
+`pressed()`: True when the frame takes a power-button press for itself (the sky frame's
+gift opening), which then redraws at once instead of holding awake. The loop
 sets `plugged` on the frame each round, so it can fetch faster on a charger. Optionally
 `next_due(now)`: when its next fetch falls due, so the morning after the quiet hours
 waits for it rather than joining Wi-Fi with nothing to fetch (the sky frame computes
@@ -128,6 +130,10 @@ def set_hold(on):
         pass
 
 
+def frame_took(frame):
+    return bool(getattr(frame, "pressed", None) and frame.pressed())
+
+
 def run(frame, args):
     cfg = frame.configure(args)
     power.set_governor(cfg["power"].get("governor"))
@@ -185,6 +191,8 @@ def run(frame, args):
             until = now + NIGHT_WAKE_S if low else min(now + NIGHT_WAKE_S, frame.next_morning(now))
             woke = power.sleep_until(min(until, now + 60) if plugged else until, suspend=suspend)
             power.log("wake", how=woke, night=1)
+            if woke == "button" and frame_took(frame):
+                night_drawn = ""
             # Fetch straight away when morning comes, if there's anything to fetch
             next_fetch = frame.next_due(now) if hasattr(frame, "next_due") else 0
             last_full = 0
@@ -281,6 +289,10 @@ def run(frame, args):
         # Never deep-sleep in the first minute after start, so a bad build can be stopped over SSH
         suspend = pw.get("suspend", False) and time.time() - started > 60 and not plugged
         woke = power.sleep_until(min(next_draw, next_fetch), suspend=suspend)
+        if woke == "button" and frame_took(frame):
+            last_full = 0  # a new picture altogether: flash it in clean
+            power.log("wake", how="button_frame")
+            continue
         if woke == "button" and hold_until and time.time() - hold_started > 5:
             # A second press while held means leave: hand the screen back to the Kindle
             # UI until the next reboot. The gap keeps a quick double tap from exiting.
