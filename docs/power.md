@@ -10,6 +10,11 @@ prints these numbers from the device's log.
 | Plus waiting for the e-ink refresh and Wi-Fi teardown before suspend | 13.5 mA | ~5 days |
 | In the frame, day-to-day | ~11 mA | ~5.5 days |
 | PW2 in the frame, deep sleep between redraws (under an hour measured, 2026-09-30) | ~10 mA | ~5.5 days of its ~1400 mAh |
+| The sky frame, in the frame (27 h measured, 2026-10-01 to 02): 5 mA by day, 3.5 mA at night | 4.7 mA | ~13 days |
+
+The sky frame costs less than half what the planes frame does: it computes most of what it
+shows, so Wi-Fi goes on about 65 times a day (around the two daily weather balloon launches,
+and every few hours otherwise) against about 190 for the planes' fetches.
 
 A PW2 spends about a second awake per frame, against a third of a second on a PW4: most of
 it is scaling the canvas down to its smaller panel (`turn()`).
