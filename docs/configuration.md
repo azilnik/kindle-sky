@@ -21,7 +21,7 @@ and logs the error in `/tmp/planes.log`.
 | `heading` | The compass direction you face when looking at the frame. The map turns so it points up | `0` (north up) |
 | `rotate` | How the Kindle sits in the frame: `270` with its logo on the left, `90` on the right | `270` |
 | `safe` | The part of the screen the frame's mat leaves visible, as `[left, top, right, bottom]` in pixels. See [frame.md](frame.md) | Fits the 13×18 insert |
-| `inset` | How far text stays inside `safe`, in pixels. 12 is 1 mm | `12`. The Paperwhite 4 config uses `0`, because its `safe` already leaves a margin |
+| `inset` | How far text stays inside `safe`, in pixels. 12 is 1 mm | `12` |
 | `panel_w` | Width of the text panel in pixels. The Paperwhite 2 config uses `560` | Set by the style |
 | `night` | When to show the night view | `["23:00", "07:00"]` |
 | `tz` | Your time zone in POSIX form, e.g. `"PST8PDT,M3.2.0,M11.1.0"` | Toronto |
