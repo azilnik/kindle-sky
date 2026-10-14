@@ -23,6 +23,21 @@ beside it for a flat USB cable.
   comes from a test fit in it: 0.5 mm more along the port edge and a 40 mm cable slot. The
   21×30 insert hasn't been built yet; measure its mat opening before printing.
 
+## Print the back board
+
+[backing-rodalm13x18.3mf](../insert/backing-rodalm13x18.3mf) ([.stl](../insert/backing-rodalm13x18.stl))
+replaces the frame's hardboard back. It has an opening over the charging port and power
+button, big enough for a U-turn adapter and a plug pushed into it. It holds like the stock
+board: its lip slides into the groove on the port side, and a turn tab locks the other side.
+
+- Print the board outer face down and the tab flat, in PETG. Both are on one plate.
+- The tab needs an M3×8 countersunk screw, put in from the inside, and an M3 nyloc nut.
+  Tighten it until the tab turns but stays where you leave it. The stock steel tab fits
+  the same screw if the printed one is too thick for the groove.
+- The board is 2.7 mm thick, with a 1.2 mm lip, like the stock board. Its length, the lip's
+  width and the tab's thickness come from photos. Check them against the stock board
+  before printing; they are at the top of [insert/backing.py](../insert/backing.py).
+
 For a different frame, add its size to `FRAMES` in [insert/insert.py](../insert/insert.py)
 and run it. The command is at the top of that file.
 
