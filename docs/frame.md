@@ -34,10 +34,10 @@ board: its lip slides into the groove on the port side, and a turn tab locks the
 - The tab needs an M3×8 countersunk screw, put in from the inside, and an M3 nyloc nut.
   Tighten it until the tab turns but stays where you leave it. The stock steel tab fits
   the same screw if the printed one is too thick for the groove.
-- The board is 177 × 126 mm and 2.7 mm thick, with a 1.2 mm lip, like the stock board (1 mm
-  shorter, so it fits a 180 mm bed). The lip's
-  width and the tab's thickness come from photos. Check them against the stock board
-  before printing; they are at the top of [insert/backing.py](../insert/backing.py).
+- The board is 177 × 126 × 2.7 mm with a 1.2 mm lip: the stock board, 1 mm shorter so it
+  fits a 180 mm bed. The lip's width and the tab's thickness come from photos. Check them
+  against the stock board before printing; they are at the top of
+  [insert/backing.py](../insert/backing.py).
 
 For a different frame, add its size to `FRAMES` in [insert/insert.py](../insert/insert.py)
 and run it. The command is at the top of that file.

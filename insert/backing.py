@@ -12,8 +12,7 @@ the back. The tab sits over the insert's finger notch on the far side, where the
 room behind the board.
 
 Values marked MEASURE are read off photos: check against the stock board before printing.
-Print the board outer face down, the tab flat, both in PETG.
-Hardware: one M3x8 countersunk
+Print the board outer face down, the tab flat, both in PETG. Hardware: one M3x8 countersunk
 screw (from the inside) and an M3 nyloc nut, snug enough that the tab turns but stays put.
 The stock steel tab fits the same screw if the printed one is too thick for the groove.
 Run:  uv run --python 3.12 --with manifold3d --with numpy --with trimesh --with pillow \\
