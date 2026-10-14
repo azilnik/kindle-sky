@@ -12,7 +12,8 @@ the back. The tab sits over the insert's finger notch on the far side, where the
 room behind the board.
 
 Values marked MEASURE are read off photos: check against the stock board before printing.
-Print the board outer face down, the tab flat, both in PETG. Hardware: one M3x8 countersunk
+Print the board outer face down, the tab flat, both in PETG.
+Hardware: one M3x8 countersunk
 screw (from the inside) and an M3 nyloc nut, snug enough that the tab turns but stays put.
 The stock steel tab fits the same screw if the printed one is too thick for the groove.
 Run:  uv run --python 3.12 --with manifold3d --with numpy --with trimesh --with pillow \\
@@ -26,11 +27,13 @@ from manifold3d import CrossSection, JoinType, Manifold
 from insert import HERE, box, export
 
 B = dict(
-    board_l=176.0,       # MEASURE: full-thickness part, short of the 180 rebate so the tab has reach
-    board_w=130.0,       # the insert's width: fits the same 131 mm rebate
+    # The stock board is 178 x 126 without its lip. 1 mm shorter here, and a 2.5 mm lip, keep
+    # the whole board inside the A1 mini's 180 mm bed; the tab takes up the extra 1 mm.
+    board_l=177.0,
+    board_w=126.0,
     t=2.7,
     lip_t=1.2,
-    lip_w=3.0,           # MEASURE: how far the lip stands out from the full-thickness edge
+    lip_w=2.5,           # MEASURE: how far the lip stands out from the full-thickness edge
     lip_end=3.0,         # the lip stops short of each corner, as the stock one does
     cut_l=50.0,          # opening: in from the port edge, past the adapter, with room for a plug
     cut_w=40.0,          # the insert's cable slot, power button to port
