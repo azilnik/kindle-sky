@@ -20,9 +20,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Fonts, code and data shipped with it keep their own licenses: Inter and IBM Plex (SIL OFL 1.1),
-Material Icons (Apache 2.0), Phosphor Icons and Tabler Icons (MIT), Weather Icons
-(SIL OFL 1.1), planes/vendor/sgp4 (MIT, sgp4 2.27 by Brandon Rhodes),
-planes/stars/stars.json (from d3-celestial, BSD 3-Clause), planes/cacert.pem (Mozilla
-root store, MPL 2.0), planes/shore.json (Natural Earth, public domain). Each has its
-license file beside it.
+Fonts, code and data shipped with it keep their own licenses: IBM Plex (SIL OFL 1.1),
+Phosphor Icons and Tabler Icons (MIT), Weather Icons (SIL OFL 1.1), sky/vendor/sgp4 (MIT,
+sgp4 2.27 by Brandon Rhodes), sky/stars/stars.json (from d3-celestial, BSD 3-Clause) and
+sky/cacert.pem (Mozilla root store, MPL 2.0). Each has its license file beside it.

@@ -1,12 +1,12 @@
 # The sky frame
 
-The sky frame shows what's above your home beyond the planes, as a map of the sky seen
-from above. The middle of the circle is straight overhead, the rim is the horizon, and you
-are the dot in the middle. Like the planes map and Google Maps, the direction you face when
+The frame shows what's above your home as a map of the sky seen from above. The middle of
+the circle is straight overhead, the rim is the horizon, and you are the dot in the middle.
+Like Google Maps, the direction you face when
 you look at the frame (`heading` in `config.json`) is at the top, with the cone pointing
 that way, and your left is on the left. It's white on black, day and night.
 
-<img alt="The sky frame at night: a black circle of stars with the ISS crossing it on a heavy dashed path, the Moon and Saturn low in the east, a balloon in the south, and a panel reading ISS overhead, 8:01 tonight, 83 degrees up, up now" src="images/screen-sky.png" width="640">
+<img alt="The sky frame at night: a black circle of stars with the ISS crossing it on a heavy dashed path, the Moon and Saturn low in the east, a balloon in the south, and a panel reading ISS overhead, gone by 8:04, 83 degrees overhead, up now" src="images/screen-sky.png" width="640">
 
 ## What it shows
 
@@ -93,15 +93,6 @@ Perseids and Quadrantids at 10 to 20 an hour, and the smaller showers at 2 to 4,
 never show. On a shower night the Kindle checks the cloud forecast; if the night will be
 mostly cloudy, the shower quietly isn't mentioned.
 
-## Turn it on
-
-```bash
-ssh kindle sh /mnt/us/planes/run.sh frame sky
-```
-
-`run.sh frame planes` switches back. Both write `"frame"` in `config.json` and restart the
-display.
-
 ## Give it as a gift
 
 The frame can open with a letter. Write it as plain text, paragraphs split by blank lines:
@@ -163,5 +154,15 @@ During the `night` hours the Kindle doesn't fetch, and redraws the sky every hal
 ## Preview it
 
 ```bash
-uv run --python 3.9 --with pillow==9.0.1 --with requests python planes/samples/sheet.py sky out/sky.png
+tools/check.sh
 ```
+
+Or one sample on its own, as a Paperwhite 2 sees it:
+
+```bash
+uv run --python 3.9 --with pillow==9.0.1 --with requests python sky/sky.py \
+  --sample sky/samples/night.json --rotate 0 --panel 758x1024 --config sky/config-pw2.json --out out/night.png
+```
+
+Each sample in [sky/samples](../sky/samples/) carries its own time and orbits, so it renders
+the same whatever the date.

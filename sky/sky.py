@@ -402,7 +402,8 @@ NEAR_MOON = 70  # a planet this close to the Moon shares its label
 
 
 def glow_text(d, xy, s, f, fill, bg):
-    """halo_text() against any background, not just paper."""
+    """Text with a halo in the background's color, drawn by offsetting: Pillow's stroke_width
+    segfaults against the Kindle's FreeType."""
     x, y = xy
     for dx in (-3, 0, 3):
         for dy in (-3, 0, 3):

@@ -1,83 +1,89 @@
-# kindle-planes
+# Kindle Sky
 
-A Kindle in a picture frame that shows the planes flying overhead.
+A Kindle in a picture frame that shows what's in the sky above your home.
 
-<img alt="A light wood picture frame on a kitchen counter. The e-ink screen inside follows Cathay Pacific 826 from Hong Kong as it descends over the lake to land in Toronto, then flashes over to a WestJet flight to Halifax and an Air Canada Rouge flight from Frankfurt, each with its height, speed and a small map" src="docs/images/hero.gif" width="820">
+<img alt="Four screens of the frame, white on black. ISS overhead at 8:04 with its path crossing a dome of stars; a Starlink train of 9 satellites; a weather balloon from Buffalo 20 km up with its climb drawn beside it; and sunset at 7:09 with the Sun's path across the day" src="docs/images/hero.png" width="820">
 
-A jailbroken Kindle Paperwhite fetches live flight positions, picks the plane closest to
-home, and shows where it's flying from and to, how high and fast it's going, and how far
-along its trip it is. The screen updates every minute and a charge lasts about five days.
-At night it draws the whole day's traffic as one picture.
+A jailbroken Kindle Paperwhite draws the sky as a map seen from above: straight overhead in
+the middle, the horizon at the rim, the way you face at the top. On it are the ISS and
+China's Tiangong station, fresh Starlink trains, weather balloons from the nearest launch
+site, the Moon, the planets and the brightest stars. Beside it, one headline for the thing
+most worth looking up for right now, and what's coming: tonight's ISS pass, the next meteor
+shower, an eclipse of the Moon.
 
-It can show the sky instead: the Sun's day, the ISS, Starlink trains, weather balloons, the
-Moon, planets, meteor showers and stars. See [docs/sky.md](docs/sky.md).
+The Sun, Moon, planets and stars are worked out on the Kindle itself, so it turns on Wi-Fi
+only for satellite orbits and weather balloons, about 65 times a day. A charge lasts about
+two weeks. Everything runs on the Kindle; your computer is only needed to install it.
 
-Everything runs on the Kindle. Your computer is only needed to install it.
+What it shows and how it picks the headline: [docs/sky.md](docs/sky.md).
 
 ## What you need
 
 - A Kindle Paperwhite 4 (2018) or Paperwhite 2 (2013) that you can jailbreak
 - An [IKEA RÖDALM 13×18 cm frame](https://www.ikea.com/ca/en/p/roedalm-frame-birch-effect-30548866/)
-  and a 3D-printed [insert](insert/) to hold the Kindle in it
-- A [flat ribbon micro-USB extension](https://www.amazon.com/Ribbon-Degree-Angled-Receptacle-Charging/dp/B07Q72VDQF),
-  since a normal plug doesn't fit in the frame
+  and two 3D-printed parts to hold the Kindle in it ([docs/frame.md](docs/frame.md))
+- A right-angle micro-USB plug or adapter, since a straight plug doesn't fit in the frame
 - A Mac or Linux computer with [uv](https://docs.astral.sh/uv/)
 
 ## Install
 
-1. **Jailbreak the Kindle and set up SSH.** This is the slow part and you only do it once.
+1. **Jailbreak the Kindle and set up SSH.** This is the slow part, and you only do it once.
    Follow [docs/device-setup.md](docs/device-setup.md) until `ssh kindle` works.
-2. **Install.** Press the Kindle's power button once to wake its Wi-Fi, then run:
+2. **Install.** Press the Kindle's power button once to wake its Wi-Fi, then run, with your
+   own latitude and longitude:
 
    ```bash
-   git clone https://github.com/azilnik/kindle-planes && cd kindle-planes && tools/install.sh
+   git clone https://github.com/azilnik/kindle-planes kindle-sky && cd kindle-sky
+   tools/install.sh --home 43.65,-79.38
    ```
 
-   This copies Python and the code to the Kindle and starts the display on every boot.
-   Within a minute it shows a plane over Toronto.
-3. **Set your home.** Edit `lat`, `lon`, `city` and `airports` in the Kindle's
-   `config.json`. See [docs/configuration.md](docs/configuration.md).
-4. **Frame it.** Print the insert, put the Kindle in the frame, and measure what the mat
-   covers with the test pattern. See [docs/frame.md](docs/frame.md).
+   It works out which Kindle it is, copies Python and the code over, and starts the display
+   on every boot. Within a minute the Kindle shows your sky. For a second Kindle, give its
+   SSH name: `KINDLE=kindle2 tools/install.sh --home ...`.
+3. **Frame it.** Print the insert and back plate for your Kindle and put it in the frame.
+   See [docs/frame.md](docs/frame.md).
+
+Then set which way you face the frame (`heading`), your time zone (`tz`) and how dark your
+sky is (`sky_glow`) in the Kindle's `config.json`: [docs/configuration.md](docs/configuration.md).
+
+Already running kindle-planes? `tools/install.sh` moves it over, settings and gift letter
+included.
+
+## Give it as a gift
+
+The frame can open with a letter, shown until whoever unwraps it presses the power button,
+and back every year on that day. `tools/gift.sh letter.txt`; see
+[docs/sky.md](docs/sky.md#give-it-as-a-gift).
+
+<img alt="A letter on the frame: Dear Sam, a few lines about looking up, signed with a small constellation, and at the foot, Next: press the power button to see your sky" src="docs/images/gift.png" width="520">
 
 ## Try it without a Kindle
 
 Render every sample situation into one image:
 
 ```bash
-uv run --python 3.9 --with pillow==9.0.1 --with requests python planes/samples/sheet.py bold-right out/sheet.png
+tools/check.sh
 ```
 
-<img alt="The day view: Tokyo to Toronto, 2,500 feet, 296 km/h, a progress line from NRT to YYZ, 14h 32m flown, and a map with the lakeshore, two airports and many small planes" src="docs/images/screen-day.png" width="640">
+That lints, runs the screen loop on a fake clock, and renders every sample as a Paperwhite 4
+(`out/sheet.png`) and a Paperwhite 2 (`out/sheet-pw2.png`) see it. No network, no Kindle.
 
-At night it draws every position it saw that day, so the approach paths show up:
+## With an agent
 
-<img alt="The night view: thousands of small dots forming two dense bands where arrivals line up for the airport, a faint shoreline, and the caption 520 flights today" src="docs/images/screen-night.png" width="640">
+The repo is set up for coding agents like [Claude Code](https://claude.com/claude-code):
+[AGENTS.md](AGENTS.md) has the device facts and step-by-step playbooks an agent needs. With
+your Kindle on `ssh kindle`, you can ask things like *"install this on my Kindle, I live in
+Vancouver"*, *"turn the dome so I'm facing west"* or *"why did the frame stop updating?"*.
 
-## How it works
+## More
 
-- Positions come from [adsb.lol](https://adsb.lol), with [adsb.fi](https://adsb.fi) as a
-  backup. Routes and aircraft types come from [adsbdb](https://www.adsbdb.com). None of them
-  need an API key.
-- The Kindle turns on Wi-Fi every 10 minutes to fetch, and every 5 when a plane is close
-  or low. In between, it moves each plane along its last known course and redraws once a
-  minute.
-- Between redraws the Kindle sleeps, which is why a charge lasts days. The numbers are in
-  [docs/power.md](docs/power.md).
-- If the network is down, the screen says when it last got data, so an outage never looks
-  like an empty sky.
-
-## Using Claude Code
-
-The repo is set up for [Claude Code](https://claude.com/claude-code): [AGENTS.md](AGENTS.md)
-has what an agent needs to know. With your Kindle on `ssh kindle`, you can ask things like
-*"set home to my address and show me a screenshot"* or *"use the detailed style"*.
-
-## Contributing
-
-Run `ruff check planes tools insert` and render the samples before opening a pull request.
-Use `tools/fbshot.sh` for screenshots of the Kindle.
+- [docs/sky.md](docs/sky.md): what's on the screen, what leads, where the data comes from
+- [docs/configuration.md](docs/configuration.md): every setting, and the power button
+- [docs/device-setup.md](docs/device-setup.md): jailbreak, SSH, what's on the Kindle
+- [docs/frame.md](docs/frame.md): the 3D prints and measuring the visible area
+- [docs/power.md](docs/power.md): battery life, measured
+- [build/](build/): how the Kindle's Python is built
 
 ## License
 
-MIT. The fonts and map data keep their own licenses; see [LICENSE](LICENSE).
+MIT. The fonts, orbit code and star data keep their own licenses; see [LICENSE](LICENSE).

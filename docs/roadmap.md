@@ -14,8 +14,7 @@ prepared once by someone technical, and everything after that is self-serve.
    by itself (captive portal).
 3. Pick the home Wi-Fi from a list, type the password and the address, pick which way the
    frame faces.
-4. The Kindle joins the home network, geocodes the address, downloads the shoreline, shows
-   "All set", and starts.
+4. The Kindle joins the home network, geocodes the address, shows "All set", and starts.
 
 A wrong password, or a router change later, goes back to the QR screen. Holding the power
 button re-enters setup mode.
@@ -32,7 +31,7 @@ button re-enters setup mode.
 ## Work
 
 1. Provision script: jailbroken Kindle in, Python, Pillow, FBInk, this code and the boot job
-   out; firmware updates blocked.
+   out (`tools/install.sh` does most of this already); firmware updates blocked.
 2. Setup mode: access point, captive portal (a tiny DNS responder plus an HTTP server), the
    setup page, geocoding after joining the home network.
 3. Self-update from GitHub releases during a Wi-Fi window; roll back if the display fails
