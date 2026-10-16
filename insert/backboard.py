@@ -1,6 +1,11 @@
 """Back board for the 13x18 (5x7") frame, replacing the stock hardboard one, with an opening
 over the Kindle's charging port and power button.
 
+It was drawn for the earlier, shallow insert. The insert's walls now stop 2.4 mm short of
+the frame's back edge, room for insert.py's back plate, which takes this board's place. This
+2.7 mm board would press on them by 0.3 mm even flush with that edge, and more wherever the
+groove holds it further in.
+
 It holds the way the stock board does: a thinner lip along one short edge slides into the
 groove in the frame's rebate wall, the other short edge drops in, and a turn tab on that
 edge swings out into the groove on the far side. The lip is flush with the outer face.

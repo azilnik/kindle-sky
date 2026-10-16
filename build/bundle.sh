@@ -57,13 +57,13 @@ fi
 
 # Pillow 11 needs FreeType 2.6 or newer when it loads. The Kindle has that and jessie does
 # not, so text can only be checked somewhere newer: unpack the bundle there and draw a frame
-docker run --rm --platform $PLATFORM -v "$WORK":/work:ro -v "$HERE/../planes":/planes:ro \
+docker run --rm --platform $PLATFORM -v "$WORK":/work:ro -v "$HERE/../sky":/sky:ro \
     $CHECK_IMAGE sh -c '
 set -e
 apt-get update -qq && apt-get install -y -qq libfreetype6 >/dev/null
 mkdir /mnt/us && tar xzf /work/'"$OUT"' -C /mnt/us
-cp -r /planes /tmp/planes && cd /tmp/planes
-/mnt/us/python/bin/python3.12 planes.py --sample samples/crowded.json --rotate 270 --out /tmp/frame.png
+cp -r /sky /tmp/sky && cd /tmp/sky
+/mnt/us/python/bin/python3.12 sky.py --sample samples/night.json --rotate 270 --out /tmp/frame.png
 /mnt/us/python/bin/python3.12 -c "
 from PIL import Image, features
 im = Image.open(\"/tmp/frame.png\")

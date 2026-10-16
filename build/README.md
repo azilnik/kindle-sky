@@ -10,7 +10,8 @@ Scripts from setting up the Kindles, kept for the next one. Steps in
   older than the Kindle's.
 - `bundle.sh`: runs `pillow-armhf.sh`, installs the result into that Python, and packs it
   as `kindle-planes-python-armv7.tar.gz` with symlinks replaced by files, since the
-  Kindle's FAT store can't hold them. This is the file attached to each release.
+  Kindle's FAT store can't hold them. This is the file attached to each release. The
+  names keep the project's first name, kindle-planes, so every release installs the same way.
 - `dropbear.sh`, `install-ssh-dropbear.sh`: SSH for firmware below 5.16.3 (a Paperwhite 2),
   where USBNetLite doesn't run. A static soft-float dropbear built from its author's
   source, and the scriptlet that installs it.

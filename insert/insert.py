@@ -9,7 +9,7 @@ One printed piece, printed face-down (the front is the visible mat):
 The Kindle's screen sits off-center in its body (the logo bezel is deeper), and the plug
 needs room on that side too, so the screen ends up off-center in the frame. The window is
 therefore the largest rectangle that is centered in the frame AND inside the screen; the
-strip of screen it hides is reported as the `safe` area for planes/config.json, so the
+strip of screen it hides is reported as the `safe` area for sky/config.json, so the
 display lays itself out in exactly the visible part.
 
 Values marked MEASURE are estimates: confirm with a ruler/calipers before printing.
@@ -33,8 +33,8 @@ FRAMES = {
     # inner frame). Its front opening is the whole rebate, so the printed face IS the mat. The room beside the port is
     # for a right-angle plug, about 10 mm past the Kindle's edge (from a photo; a flat FPC
     # extension needs 5.5 and leaves a 10 mm wider window).
-    # `depth` fills the rebate, so the back board closes on the insert instead of leaving it
-    # loose behind the glass.
+    # `depth` fills the rebate: the insert's walls stop plate_t short of the back edge and the
+    # back plate (--plate) closes it flush, in place of the stock back board.
     "rodalm13x18": dict(rebate_l=183.0, rebate_w=131.2, depth=24.0, ikea_mat=False, plug_room=10.5,
                         ikea_opening_l=0, ikea_opening_w=0),
     # IKEA RÖDALM 21x30 cm, landscape: printed inner mat behind IKEA's paper mat (double mat),
@@ -369,6 +369,8 @@ if __name__ == "__main__":
     L = layout(P, f)
     solid, thick = build(P, f, L)
     if "plate" in opts:
+        if "depth" not in f:
+            sys.exit("--plate: %s has no measured depth, so its insert has no plate" % frame)
         # printed back face down, fingers up
         pl8 = plate(P, f, L).rotate((180, 0, 0))
         mesh = export(pl8.translate((0, 0, -pl8.bounding_box()[2])), os.path.join(HERE, "plate-" + name))

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Name: Install SSH (USBNetLite)
-# Author: kindle-planes
+# Author: kindle-sky
 # UseHooks
 
 # Installs USBNetLite (dropbear) from /mnt/us/claude-bootstrap with key-only login

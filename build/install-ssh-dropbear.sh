@@ -1,6 +1,6 @@
 #!/bin/sh
 # Name: Install SSH (dropbear)
-# Author: kindle-planes
+# Author: kindle-sky
 # UseHooks
 
 # A scriptlet for Kindles on firmware below 5.16.3, where USBNetLite doesn't run. Installs

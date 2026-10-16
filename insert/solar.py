@@ -8,8 +8,9 @@ The shell is closed: the plate, a top wall, the face, an angled underside and tw
 The cable runs inside to the port end, where the Kindle's right-angle adapter plug comes
 straight back through the plate into the same space, so no cable shows.
 The plate holds itself in the frame with leaf-spring fingers, as insert.py describes.
-Printed standing on its port end: every wall is vertical, the openings are peaked, and only
-the top end's wall bridges, 34 mm at most.
+Printed standing on its port end: every wall is vertical and the openings are peaked. Use
+supports from the build plate only: the plate stays inside the rebate, so its bottom edge
+starts 2 mm above the bed, and the cable slot's end bridges 38 mm.
 
 Coordinates are insert.py's: x along the frame (0 at its center, + away from the port),
 y up, z back from the mat's front face. The frame's back edge is at z = depth.
