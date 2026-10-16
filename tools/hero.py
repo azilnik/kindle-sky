@@ -57,23 +57,32 @@ def coeffs(src, dst):
     return np.linalg.solve(np.array(rows, float), np.array(rhs, float))
 
 
-def place(screen, plate):
-    """The render, tinted to e-ink and warped onto the screen in the photo, at 2x then down
-    so its edges are smooth."""
+def tint(screen):
+    """The render in the photo's e-ink grays, its light falling off toward the mat's shadowed
+    top and left."""
     g = np.asarray(screen, float)[..., None] / 255.0
-    # The panel's light falls off toward the mat's shadowed top and left
     h, w = screen.size[1], screen.size[0]
     yy, xx = np.mgrid[0:h, 0:w]
     shade = 1 - 0.10 * np.clip(1 - np.minimum(xx / (0.03 * w), yy / (0.04 * h)), 0, 1) - 0.04 * yy / h
     rgb = (INK + (PAPER - INK) * g) * shade[..., None]
-    tinted = Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB")
-    big = plate.size[0] * 2, plate.size[1] * 2
-    quad = [(x * 2, y * 2) for x, y in QUAD]
-    c = coeffs([(0, 0), (w, 0), (w, h), (0, h)], quad)
-    warped = tinted.transform(big, Image.PERSPECTIVE, tuple(c), Image.BICUBIC)
-    mask = Image.new("L", (w, h), 255).transform(big, Image.PERSPECTIVE, tuple(c), Image.BICUBIC)
-    layer = Image.composite(warped, plate.resize(big), mask).resize(plate.size, Image.LANCZOS)
-    return layer.filter(ImageFilter.GaussianBlur(0.35))
+    return Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB")
+
+
+def composite(screen, plate, k):
+    """The tinted render warped onto the screen in the photo, with the photo `k` times its size
+    (pass it already scaled): the screen stays sharp however large the photo is drawn."""
+    tinted = tint(screen)
+    w, h = tinted.size
+    c = coeffs([(0, 0), (w, 0), (w, h), (0, h)], [(x * k, y * k) for x, y in QUAD])
+    warped = tinted.transform(plate.size, Image.PERSPECTIVE, tuple(c), Image.BICUBIC)
+    mask = Image.new("L", (w, h), 255).transform(plate.size, Image.PERSPECTIVE, tuple(c), Image.BICUBIC)
+    return Image.composite(warped, plate, mask)
+
+
+def place(screen, plate):
+    """At 2x then down, so the screen's edges are smooth, and softened like the photo."""
+    big = composite(screen, plate.resize((plate.size[0] * 2, plate.size[1] * 2)), 2)
+    return big.resize(plate.size, Image.LANCZOS).filter(ImageFilter.GaussianBlur(0.35))
 
 
 def change(old, new):
@@ -87,7 +96,7 @@ def partial(old, new, n=4):
     return [Image.blend(old, new, (i + 1) / n) for i in range(n)]
 
 
-def main():
+def setup():
     with open(os.path.join(ROOT, "sky", "config.json")) as f:
         cfg = dict(json.load(f), safe=SAFE)
     cfg_path = os.path.join(tempfile.mkdtemp(), "config.json")
@@ -95,8 +104,11 @@ def main():
         json.dump(cfg, f)
     base.load_config(argparse.Namespace(config=cfg_path, heading=None, rotate=0))
     sky.layout()
-    plate = Image.open(os.path.join(ROOT, "docs", "images", "frame.jpg")).convert("RGB")
+    return Image.open(os.path.join(ROOT, "docs", "images", "frame.jpg")).convert("RGB")
 
+
+def timeline(loop=True):
+    """The screen at every frame, FPS_MS apart, and which scene each frame belongs to."""
     evening = 1790465100                  # the iss_soon sample: 7:25 pm, ISS overhead at 8:01
     moon = 1790400600                     # the late_moon sample: 1:30 am, the Harvest Moon
     first = render("iss_soon", evening)
@@ -112,15 +124,21 @@ def main():
         ("partial", [render("balloon_burst", 1790341920)], 70),
     ]
     screens, last = [], None
-    for how, imgs, hold in scenes:
+    for n, (how, imgs, hold) in enumerate(scenes):
         for k, img in enumerate(imgs):
             if last is not None:
-                screens += change(last, img) if how == "change" and k == 0 else partial(last, img)
-            screens += [img] * hold
+                screens += [(s, n) for s in (change(last, img) if how == "change" and k == 0 else partial(last, img))]
+            screens += [(img, n)] * hold
             last = img
-    # Back to the first picture, so the loop has no seam
-    first = scenes[0][1][0]
-    screens += change(last, first)
+    if loop:
+        # Back to the first picture, so the loop has no seam
+        screens += [(s, 0) for s in change(last, first)]
+    return screens
+
+
+def main():
+    plate = setup()
+    screens = [s for s, _ in timeline()]
     frames, cache = [], {}
     for s in screens:
         key = s.tobytes().__hash__()
