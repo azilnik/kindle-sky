@@ -2,7 +2,7 @@
 
 A Kindle in a picture frame that shows what's in the sky above your home.
 
-<img alt="Four screens of the frame, white on black. ISS overhead at 8:04 with its path crossing a dome of stars; a Starlink train of 9 satellites; a weather balloon from Buffalo 20 km up with its climb drawn beside it; and sunset at 7:09 with the Sun's path across the day" src="docs/images/hero.png" width="820">
+<img alt="A light wood picture frame on a kitchen counter. Its e-ink screen, white on dark, says the ISS is overhead at 8:01 tonight, then flashes and shows it crossing the dome of stars beside a Starlink train, then the Harvest Moon with Saturn after midnight, then the morning's weather balloon from Buffalo climbing to 20 km and falling after it bursts" src="docs/images/hero.gif" width="820">
 
 A jailbroken Kindle Paperwhite draws the sky as a map seen from above: straight overhead in
 the middle, the horizon at the rim, the way you face at the top. On it are the ISS and
