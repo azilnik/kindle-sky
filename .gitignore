@@ -16,4 +16,5 @@ __pycache__/
 .DS_Store
 out/
 insert/preview-*.png
+insert/test-*
 insert/render-*.png

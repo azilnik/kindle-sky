@@ -59,8 +59,7 @@ also runs it, tested one night on 2026-09-30, and differs in ways the code can't
 
 `safe` is the visible area, measured right at the mat, and the map runs to it. Text (story
 panel, the featured plane's label, the night caption) keeps `inset` further in: 12 px, 1 mm
-on either model. The PW4's config has `"inset": 0` because its hand-set `safe` predates the
-rule and already has its margin; its frames are pixel-identical either way.
+on either model.
 
 ## Deploying
 
