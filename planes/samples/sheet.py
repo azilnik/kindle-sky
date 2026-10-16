@@ -1,5 +1,6 @@
 """Render every sample in one style and tile them into a contact sheet.
 Usage: sheet.py STYLE out.png [--panel WxH] [--config FILE]
+STYLE is a planes style, or "sky" for the sky frame's samples in sky/.
 --panel 758x1024 and --config planes/config-pw2.json show a PW2."""
 import glob
 import json
@@ -22,14 +23,19 @@ scale = int(panel.split("x")[1]) / 1448.0 if panel else 1.0
 SAFE = tuple(round(v * scale) for v in SAFE)
 label_font = ImageFont.truetype(os.path.join(PLANES, "fonts", "Inter-SemiBold.ttf"), 22)
 
+sky = style == "sky"
 tiles = []
-for path in sorted(glob.glob(os.path.join(HERE, "*.json"))):
+for path in sorted(glob.glob(os.path.join(HERE, "sky" if sky else "", "*.json"))):
     name = os.path.basename(path)[:-5]
     if name == "base":
         continue
     png = "/tmp/sample_%s.png" % name
-    cmd = [sys.executable, os.path.join(PLANES, "planes.py"), "--sample", path, "--style", style,
-           "--rotate", "0", "--out", png, "--config", config] + (["--night"] if name == "night" else [])
+    if sky:
+        cmd = [sys.executable, os.path.join(PLANES, "sky.py"), "--sample", path]
+    else:
+        cmd = [sys.executable, os.path.join(PLANES, "planes.py"), "--sample", path, "--style", style] + \
+            (["--night"] if name == "night" else [])
+    cmd += ["--rotate", "0", "--out", png, "--config", config]
     if panel:
         cmd += ["--panel", panel]
     subprocess.check_call(cmd, stdout=subprocess.DEVNULL)

@@ -14,12 +14,10 @@ import json
 import math
 import os
 import re
-import subprocess
 import sys
 import time
-import traceback
 
-import power
+import loop
 import requests
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
@@ -110,7 +108,6 @@ ADSB_URLS = (
 )
 ROUTE_URL = "https://api.adsbdb.com/v0/callsign/{cs}"
 AIRFRAME_URL = "https://api.adsbdb.com/v0/aircraft/{hex}"
-UA = {"User-Agent": "kindle-planes/0.1 (home display)"}
 
 # adsbdb's airline mapping is wrong for some carriers (it puts PTR on a Nova Scotia
 # government fleet), so trust the callsign prefix for the ones common over Toronto.
@@ -130,24 +127,18 @@ AIRLINES = {
     "LOT": "LOT", "FFT": "Frontier", "NKS": "Spirit", "PDT": "Piedmont",
 }
 
-# Timing. The screen redraws every DRAW_S from dead-reckoned positions; the network is
-# only touched every FETCH_S (joining Wi-Fi is the Kindle's biggest power cost).
-DRAW_S = 60
+# Timing. The screen redraws every minute (loop.py) from dead-reckoned positions; the network
+# is only touched every FETCH_S (joining Wi-Fi is the Kindle's biggest power cost).
 FETCH_S = 600             # routine: cruising traffic dead-reckons well for 10 minutes
 FETCH_BUSY_S = 300        # featured plane low (turning to land / climbing out) or about to leave
 QUIET_FETCH_S = 900       # nothing in view: check back less often
 MAX_PROJECT_S = 660       # never guess further than this past a real fix
 FETCH_MARGIN_NM = 8       # fetch a ring beyond the map so arrivals are ready to slide in
-FULL_REFRESH_S = 1800     # a full e-ink flash this often to clear ghosting
-# Night: one constellation of the day's traffic, Wi-Fi off, no redraws until morning
+# Night: one constellation of the day's traffic, Wi-Fi off, no redraws until morning.
+# Near empty (loop.battery_low) it parks on the constellation too, since e-ink keeps the
+# last image once the battery dies
 NIGHT = ("23:00", "07:00")
-NIGHT_WAKE_S = 1800       # brief no-op wakes so no single suspend runs for hours
-REFUSED_REBOOT_S = 1200   # suspend refused this long in a row: reboot, as for a dead link
 FRONTLIGHT = 3            # level (0-24) while on a charger; suspend kills it, so dark on battery
-# Near empty: park on the constellation, since e-ink keeps the last image once the battery
-# dies; come back to live data when charging or recovered past LOW_BATTERY_RESUME
-LOW_BATTERY = 5
-LOW_BATTERY_RESUME = 10
 
 CACHE_PATH = os.path.join(HERE, "cache.json")
 ROUTE_TTL = 6 * 3600
@@ -450,6 +441,8 @@ class CachedDraw(ImageDraw.ImageDraw):
             return super().textbbox(xy, text, font, *args, **kw)
         key = (text, id(font))
         if key not in _bbox:
+            if len(_bbox) > 4000:
+                _bbox.clear()  # a clock's every minute is a new string: never let it grow for weeks
             _bbox[key] = super().textbbox((0, 0), text, font)
         b = _bbox[key]
         return (b[0] + xy[0], b[1] + xy[1], b[2] + xy[0], b[3] + xy[1])
@@ -859,16 +852,6 @@ def save_tracks():
     write_json(TRACKS_PATH, TRACKS, separators=(",", ":"))
 
 
-def battery_low(was_low):
-    bat = power.battery()
-    if not bat or not bat[0]:
-        return False
-    cap, on_ac = int(bat[0]), bat[3] == "1"
-    if on_ac:
-        return False
-    return cap <= (LOW_BATTERY_RESUME if was_low else LOW_BATTERY)
-
-
 def render_night(shore, tracks, note=None):
     """The day's traffic as a constellation: every sampled position a dark point on
     paper, darker where paths overlap, so the approach corridors draw themselves."""
@@ -912,7 +895,7 @@ def render_night(shore, tracks, note=None):
 TRAFFIC_PATH = os.path.join(HERE, "traffic.json")
 BUCKET_S = 300
 TRAFFIC = {}
-STALE_SINCE = None  # "1:23" when the data is too old to project; set by main()
+STALE_SINCE = None  # "1:23" when the data is too old to project; set by Frame.render()
 
 
 def load_traffic():
@@ -1199,54 +1182,6 @@ def render(planes, routes, frames, shore, now=None):
     return img
 
 
-# ---------- output ----------
-
-FBINK = None
-for cand in ("/mnt/us/libkh/bin/fbink", "/var/local/kmc/bin/fbink", "/mnt/us/usbnet/bin/fbink", "fbink"):
-    if cand == "fbink" or os.path.exists(cand):
-        FBINK = cand
-        break
-
-
-def panel_size():
-    """The panel's native portrait size. Everything is drawn on the PW4's 1448x1072 canvas;
-    a smaller panel (a PW2's 758x1024 is the same shape) gets the frame scaled to fit."""
-    try:
-        with open("/sys/class/graphics/fb0/modes") as f:
-            m = re.match(r"\w+:(\d+)x(\d+)", f.read())  # "U:758x1024p-0"
-        if m:
-            return int(m.group(1)), int(m.group(2))
-    except OSError:
-        pass
-    return H, W
-
-
-PANEL = panel_size()
-
-
-def turn(img):
-    """Scale to the panel if it's smaller than the canvas, then clockwise quarter turns onto
-    it. transpose() is a lossless row copy; rotate() resamples every pixel and cost the
-    Kindle a few hundred ms a frame."""
-    size = (PANEL[1], PANEL[0]) if img.size[0] > img.size[1] else PANEL
-    if img.size != size:
-        # BILINEAR: 370 ms on a PW2 where LANCZOS took 830, and at this 0.7x scale the two
-        # are indistinguishable even magnified (Pillow widens either filter to the area)
-        img = img.resize(size, Image.BILINEAR)
-    if not ROTATE % 360:
-        return img
-    return img.transpose({90: Image.ROTATE_270, 180: Image.ROTATE_180, 270: Image.ROTATE_90}[ROTATE % 360])
-
-
-def show(path, flash):
-    # -w: block until the panel finishes refreshing. Suspending the EPDC mid-update hung
-    # the kernel roughly every 7th sleep, and the watchdog rebooted the Kindle each time
-    args = [FBINK, "-q", "-w", "-g", "file=%s" % path]
-    if flash:
-        args.insert(2, "-f")
-    subprocess.call(args)
-
-
 LAST_CFG = None
 
 
@@ -1290,10 +1225,72 @@ def load_config(args):
     if args.style:
         STYLE = args.style
     apply_layout(cfg.get("safe") or SAFE)  # after STYLE: the panel width depends on it
+    return dict(power=POWER, rotate=ROTATE, style=STYLE, frontlight=FRONTLIGHT)
+
+
+class Frame:
+    """The planes frame for loop.run: ADS-B every 5 to 15 minutes, positions dead-reckoned
+    in between so the planes move each minute, and the day's traffic as a constellation
+    at night."""
+
+    def __init__(self, args):
+        self.args, self.log = args, {}
+        with open(os.path.join(HERE, "shore.json")) as f:
+            self.shore = json.load(f)
+        self.cache = Cache(CACHE_PATH)
+        self.raw, self.routes, self.frames = [], {}, {}
+        load_traffic()
+        load_tracks()
+
+    def configure(self, args):
+        return load_config(args)
+
+    def fetch(self, session, now):
+        self.raw = fetch_aircraft(session)
+        self.routes, self.frames = enrich(session, self.cache, self.raw, now)
+        record_traffic(len(project(self.raw, now)), now)
+        save_tracks()
+        if self.args.save_sample:
+            with open(self.args.save_sample, "w") as f:
+                json.dump({"planes": project(self.raw, now), "routes": self.routes, "frames": self.frames}, f, indent=1)
+
+    @property
+    def fetch_log(self):
+        return {"planes": len(self.raw)}
+
+    def fetch_every(self, now):
+        return fetch_interval(self.raw, self.routes, now)
+
+    def render(self, now, fetched_at):
+        global STALE_SINCE
+        visible = project(self.raw, now)
+        # The night view spans the whole screen, wider than the day map beside the panel
+        record_positions(project(self.raw, now, night_box()[1]), now)
+        stale = now - fetched_at > MAX_PROJECT_S
+        STALE_SINCE = time.strftime("%-I:%M", time.localtime(fetched_at)) if stale and fetched_at else None
+        self.log = {"planes": len(visible)}
+        return render(visible, self.routes, self.frames, self.shore)
+
+    def moving(self, now):
+        return bool(project(self.raw, now))
+
+    def in_night(self, now):
+        return in_night(now)
+
+    def next_morning(self, now):
+        return next_morning(now)
+
+    def night_key(self, now, mode):
+        return mode + day_key(now)
+
+    def render_night(self, now, mode):
+        img = render_night(self.shore, TRACKS, note="Battery low" if mode == "low" else None)
+        self.log = {"points": len(TRACKS["pts"]), "flights": len(TRACKS["hexes"])}
+        save_tracks()
+        return img
 
 
 def main():
-    global STALE_SINCE
     ap = argparse.ArgumentParser()
     ap.add_argument("--once", action="store_true", help="render one frame and exit")
     ap.add_argument("--out", help="write PNG here instead of pushing to the screen")
@@ -1307,21 +1304,15 @@ def main():
     ap.add_argument("--config", help="read this instead of the config.json beside planes.py")
     args = ap.parse_args()
     if args.panel:
-        global PANEL
-        PANEL = tuple(int(v) for v in args.panel.split("x"))
+        loop.PANEL = tuple(int(v) for v in args.panel.split("x"))
     load_config(args)
 
-    with open(os.path.join(HERE, "shore.json")) as f:
-        shore = json.load(f)
-    cache = Cache(CACHE_PATH)
-    session = requests.Session()
-    session.headers.update(UA)
-    # PGM: uncompressed, 7 ms to write on the Kindle where PNG took 500+
-    frame_path = args.out or "/tmp/planes.pgm"
     if args.out:
         os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
 
     if args.sample:
+        with open(os.path.join(HERE, "shore.json")) as f:
+            shore = json.load(f)
         with open(args.sample) as f:
             data = json.load(f)
         TRAFFIC.update(data.get("traffic", {}))
@@ -1330,156 +1321,12 @@ def main():
         else:
             img = render(data["planes"], data["routes"], data["frames"], shore,
                          now=time.strptime(data.get("time", "2026-09-24 16:40"), "%Y-%m-%d %H:%M"))
-        turn(img).save(frame_path)
-        print(frame_path)
+        path = args.out or "/tmp/planes.pgm"
+        loop.turn(img, ROTATE).save(path)
+        print(path)
         return
 
-    power.set_governor(POWER.get("governor"))
-    load_traffic()
-    load_tracks()
-    night_drawn = ""
-    low = False
-    started, hold_until, hold_started = time.time(), 0, 0
-    raw, routes, frames = [], {}, {}
-    fetched_at = next_fetch = last_full = 0.0
-    failures = 0
-    refused_since = 0.0
-    last_style = STYLE
-    power.start_ssh()
-    while True:
-        load_config(args)
-        restyled, last_style = last_style != STYLE, STYLE
-        now = time.time()
-
-        low = not args.once and battery_low(low)
-        if not args.once and (in_night(now) or low):
-            power.set_frontlight(0)  # nobody's reading it at night or on a dying battery
-            mode = "low" if low else "night"
-            if night_drawn != mode + day_key(now):
-                try:
-                    img = render_night(shore, TRACKS, note="Battery low" if low else None)
-                    turn(img).save(frame_path)
-                    show(frame_path, flash=True)
-                    night_drawn = mode + day_key(now)
-                    power.log("night_draw", mode=mode, points=len(TRACKS["pts"]), flights=len(TRACKS["hexes"]))
-                    save_tracks()
-                except Exception:
-                    traceback.print_exc()
-            if POWER.get("wifi_toggle"):
-                power.wifi_down()
-            suspend = POWER.get("suspend", False) and time.time() - started > 60
-            woke = power.sleep_until(now + NIGHT_WAKE_S if low else min(now + NIGHT_WAKE_S, next_morning(now)),
-                                     suspend=suspend)
-            power.log("wake", how=woke, night=1)
-            refused_since = check_refused(woke, refused_since)
-            next_fetch = 0  # fetch straight away when morning comes
-            last_full = 0
-            continue
-
-        if now >= next_fetch:
-            woke = time.time()
-            # Escalate on a dead link (wifid can lose the network overnight and never retry):
-            # radio cycle every 3rd failure, restart wifid after ~1 h, reboot after ~3 h
-            if failures and failures % 36 == 0:
-                power.reboot()
-            if failures and failures % 12 == 0:
-                power.restart_wifid()
-            took = power.wifi_up(reset=failures >= 3 and failures % 3 == 0) if POWER.get("wifi_toggle") else 0.0
-            try:
-                # wifid reports CONNECTED a moment before the link carries traffic; retry
-                # inside this wake rather than paying for another Wi-Fi join next minute
-                for attempt in range(3):
-                    try:
-                        raw = fetch_aircraft(session)
-                        break
-                    except requests.ConnectionError:
-                        if attempt == 2:
-                            raise
-                        time.sleep(2)
-                fetched_at, failures = now, 0
-                routes, frames = enrich(session, cache, raw, now)
-                record_traffic(len(project(raw, now)), now)
-                save_tracks()
-                if args.save_sample:
-                    with open(args.save_sample, "w") as f:
-                        json.dump({"planes": project(raw, now), "routes": routes, "frames": frames}, f, indent=1)
-            except (requests.RequestException, ValueError) as e:
-                failures += 1
-                print("fetch failed (%d): %r" % (failures, e), file=sys.stderr, flush=True)
-            power.start_ssh()
-            if POWER.get("wifi_toggle"):
-                power.wifi_down()
-            if failures:
-                next_fetch = now + min(60 * failures, FETCH_S)  # adsb.lol rate-limits; back off
-            else:
-                next_fetch = now + fetch_interval(raw, routes, now)
-            power.log("fetch", ok=int(not failures), wifi_s="%.1f" % (took or -1),
-                      awake_s="%.1f" % (time.time() - woke), planes=len(raw))
-
-        # Suspend switches the frontlight off, so a steady glow is only possible awake:
-        # light it when on a charger (and skip suspend below), keep it dark on battery
-        charging = power.on_ac()
-        power.set_frontlight(FRONTLIGHT if charging else 0)
-        drawn = time.time()
-        visible = project(raw, drawn)
-        # The night view spans the whole screen, wider than the day map beside the panel
-        record_positions(project(raw, drawn, night_box()[1]), drawn)
-        stale = drawn - fetched_at > MAX_PROJECT_S
-        STALE_SINCE = time.strftime("%-I:%M", time.localtime(fetched_at)) if stale and fetched_at else None
-        try:
-            img = render(visible, routes, frames, shore)
-            turn(img).save(frame_path)
-            if not args.out:
-                flash = restyled or drawn - last_full > FULL_REFRESH_S
-                show(frame_path, flash=flash)
-                if flash:
-                    last_full = drawn
-        except Exception:
-            if args.once:
-                raise
-            traceback.print_exc()
-        power.log("draw", ms=int((time.time() - drawn) * 1000), planes=len(visible))
-        if args.once:
-            print(frame_path)
-            return
-
-        # Draw on the minute so the clock is exact; with nothing to move, just wait for the fetch
-        next_draw = (int(time.time() // DRAW_S) + 1) * DRAW_S if visible else next_fetch
-        # Never deep-sleep in the first minute after start, so a bad build can be stopped over SSH
-        suspend = POWER.get("suspend", False) and time.time() - started > 60 and not (charging and FRONTLIGHT)
-        woke = power.sleep_until(min(next_draw, next_fetch), suspend=suspend)
-        if woke == "button" and hold_until and time.time() - hold_started > 5:
-            # A second press while held means leave: hand the screen back to the Kindle
-            # UI until the next reboot. The gap keeps a quick double tap from exiting.
-            power.log("button_exit")
-            if os.path.exists(power.HOLD):
-                os.remove(power.HOLD)
-            subprocess.call(["sh", os.path.join(HERE, "run.sh"), "stop"])
-            return
-        if woke == "button":
-            # A power-button press means someone wants in: hold awake with Wi-Fi for 10 minutes
-            open(power.HOLD, "w").close()
-            hold_started = time.time()
-            hold_until = hold_started + 600
-            power.start_ssh()
-            power.wifi_up()
-            power.log("button_hold")
-        if hold_until and time.time() > hold_until and os.path.exists(power.HOLD):
-            os.remove(power.HOLD)
-            hold_until = 0
-        power.log("wake", how=woke)
-        refused_since = check_refused(woke, refused_since)
-
-
-def check_refused(woke, since):
-    """When the refusals started, or 0. Reboots once they've gone on too long."""
-    if woke != "refused":
-        return 0.0
-    if not since:
-        return time.time()
-    if time.time() - since > REFUSED_REBOOT_S:
-        power.reboot()
-    return since
+    loop.run(Frame(args), args)
 
 
 if __name__ == "__main__":

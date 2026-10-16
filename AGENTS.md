@@ -7,7 +7,9 @@ Everything runs on the Kindle. The laptop only previews, builds and deploys.
 ## Preview, don't fetch
 
 Render from samples, never from the live API on the laptop: a laptop on the same network as
-a Kindle shares its public IP and trips adsb.lol's rate limit for both.
+a Kindle shares its public IP and trips adsb.lol's rate limit for both. The same goes for
+the sky frame's CelesTrak orbits, which CelesTrak rate-limits per IP: only the device
+fetches them, at most once every 20 hours, and keeps them in `orbits.csv`.
 
 ```bash
 uv run --python 3.9 --with pillow==9.0.1 --with requests python planes/planes.py \
@@ -19,9 +21,13 @@ Every style, every sample, one image: `planes/samples/sheet.py STYLE out/sheet.p
 `--panel 758x1024 --config planes/config-pw2.json`. Regenerate samples after changing the
 home location: `planes/samples/make.py` and `make_night.py`.
 
+The sky frame: `planes/sky.py --sample planes/samples/sky/night.json --rotate 0 --out
+out/x.png` (same `uv run` prefix, same `--panel` and `--config`), or `sheet.py sky`. Each
+sample carries its own time and orbits, so it renders the same whatever the date.
+
 The pinned Python 3.9 + Pillow 9 preview is the compatibility floor. Keep `planes.py` 3.9
-compatible. The Kindle itself runs a standalone Python 3.12 with a Pillow built against its
-own FreeType (`docs/device-setup.md`).
+compatible, and everything else in `planes/` with it. The Kindle itself runs a standalone
+Python 3.12 with a Pillow built against its own FreeType (`docs/device-setup.md`).
 
 ## Kindle quirks
 
@@ -69,15 +75,52 @@ rule and already has its margin; its frames are pixel-identical either way.
 - `tools/deploy.sh --hold` leaves the Kindle awake with Wi-Fi on. Remove
   `/mnt/us/planes/HOLD` when done, or the battery drains.
 - Runtime files stay on the device and are gitignored: `cache.json`, `traffic.json`,
-  `tracks.json`, `power.log`, `ssh.log`.
+  `tracks.json`, `power.log`, and the sky frame's `orbits.csv` and `balloon.json`.
+- `tools/gift.sh letter.txt` leaves a letter (`gift.txt`) on the sky frame until the first
+  press of the power button, which renames it `gift.seen` and writes that day to
+  `gift.date`; it comes back on that date every year. Deploys never carry any of them. It
+  also copies the letter into `/mnt/us/documents` as a book.
+- `"frame"` in the device's `config.json` picks `planes` or `sky`; `run.sh frame NAME` or
+  `tools/deploy.sh --frame NAME` switches and restarts. Both frames always ship.
 - `tools/grid.sh` shows the test pattern for measuring `safe` and stops the loop to do it.
   Always finish with `tools/grid.sh done`, or the Kindle stays awake on the pattern.
 - After a visual change, show a screenshot: `tools/fbshot.sh` reads the framebuffer.
 - Measure power only on battery: `ac=0` rows in `power.log`, summarized by `tools/battery.py`.
 
+## Two frames, one loop
+
+`loop.py` owns everything that was hard won on the device: Wi-Fi joins and recovery,
+backoff, suspend, the frontlight, the power button, night and low-battery rest. A frame
+(`planes.py`, `sky.py`) only fetches and draws; its hooks are listed at the top of
+`loop.py`. Change device behavior there, once, not in a frame. `sky.py` borrows fonts,
+layout and helpers from `planes.py` (`import planes as P`), so `load_config` and
+`apply_layout` serve both.
+
+The sky frame's headline is chosen by `hero()` in `sky.py`: events with a wonder score,
+explained in `docs/sky.md`. Add a new kind of thing as an event there, never as a special
+case. It never shows bad news: say what to look forward to instead.
+
+Design it on the panel, through the webcam (`tools/camshot.sh`) as well as `fbshot.sh`:
+e-ink black is a dark gray, so grays below about 150 vanish, and anything under 34 px is
+unreadable from across a room.
+
+After changing `loop.py` or when the sky frame redraws, run `tools/simulate.py`: the real
+loop and frame on a fake clock, panel and SondeHub, through a balloon flight, passes,
+unplugging, a clock set back and a failed render, with checks on every screen update and
+flash. Nothing touches the network or a Kindle.
+
+The sky frame's pure-Python work (sgp4 pass searches, rise and set times, the star field)
+is cached between frames by `kept()`; the first frame after a start costs the most.
+`planes/vendor/sgp4` is upstream sgp4 2.27 (its pure-Python modules and `omm.py`),
+unmodified and excluded from ruff: to update it, copy a release's `sgp4/*.py` over it.
+Orbits come as CelesTrak's CSV, not TLEs: TLEs stop at catalog number 99999, and every
+launch since mid-2026 is past it.
+
 ## Style rules
 
 - Comments say why, not what. Delete code instead of commenting it out.
+- Words on the screen are plain, for anyone in the kitchen: "Jupiter at its brightest",
+  never "opposition"; "Half moon", not "first quarter"; "Hobby balloon", not "pico".
 - `ruff check planes tools insert` must pass (`ruff.toml`).
 - Styles: `bold-right` is the default and what the photos show. `bold` mirrors it,
   `bold-traffic` adds the day's chart, `detailed` is the dense original.

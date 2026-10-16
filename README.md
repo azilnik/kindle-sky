@@ -9,6 +9,9 @@ home, and shows where it's flying from and to, how high and fast it's going, and
 along its trip it is. The screen updates every minute and a charge lasts about five days.
 At night it draws the whole day's traffic as one picture.
 
+It can show the sky instead: the Sun's day, the ISS, Starlink trains, weather balloons, the
+Moon, planets, meteor showers and stars. See [docs/sky.md](docs/sky.md).
+
 Everything runs on the Kindle. Your computer is only needed to install it.
 
 ## What you need

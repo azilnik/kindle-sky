@@ -1,5 +1,7 @@
 target-version = "py39"
 line-length = 120
+# Upstream sgp4, kept byte-identical to its release so it can be checked against it
+extend-exclude = ["planes/vendor"]
 
 [lint]
 select = ["E", "F", "W", "B", "SIM", "I"]

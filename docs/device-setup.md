@@ -78,6 +78,7 @@ FreeType; the code draws halos by offsetting text instead.
 |---|---|
 | Stop and get the Kindle UI back | `ssh kindle sh /mnt/us/planes/run.sh stop`, or press power twice (see README) |
 | Switch style | `ssh kindle sh /mnt/us/planes/run.sh style detailed` |
+| Switch frame | `ssh kindle sh /mnt/us/planes/run.sh frame sky` (or `planes`), or `tools/deploy.sh --frame sky` |
 | First install | `tools/install.sh` |
 | Deploy code | `tools/deploy.sh` (waits for a Wi-Fi window) |
 | Keep it awake while iterating | `tools/deploy.sh --hold`, then `rm /mnt/us/planes/HOLD` |
@@ -94,13 +95,15 @@ FreeType; the code draws halos by offsetting text instead.
 | `/mnt/us/planes/config.json` | Your settings. A deploy never overwrites it |
 | `/mnt/us/planes/cache.json` | Routes and aircraft types already looked up |
 | `/mnt/us/planes/tracks.json`, `traffic.json` | Today's positions for the night view, and counts for the traffic chart |
+| `/mnt/us/planes/orbits.csv`, `balloon.json` | The sky frame's satellite orbits, and the weather balloon's track so far |
 | `/mnt/us/planes/power.log` | Battery readings, summarized by `tools/battery.py` |
 | `/mnt/us/python/` | Python 3.12 with Pillow and requests |
 | `/etc/upstart/planes.conf` | Starts the display on boot |
 | `/tmp/planes.log` | Errors. Cleared on reboot |
 
 The Kindle sends nothing anywhere except requests for plane positions near `lat`, `lon`,
-and for the routes of the planes it shows. To remove everything, delete the two folders and
+and for the routes of the planes it shows. The sky frame also asks CelesTrak for orbits
+and SondeHub for weather balloons near `lat`, `lon`. To remove everything, delete the two folders and
 `planes.conf`.
 
 ## Paperwhite 2
