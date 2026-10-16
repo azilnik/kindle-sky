@@ -1,6 +1,6 @@
 """The README's hero: the sky frame on the kitchen counter, a day in 25 seconds. The ISS is
 due tonight, then crosses the dome with a Starlink train beside it; the Harvest Moon after
-midnight; the morning's weather balloon climbing, then falling. E-ink flashes between them. Renders come from the samples, set into the photo of the frame
+midnight; the morning's weather balloon climbing, then falling. Renders come from the samples, set into the photo of the frame
 (docs/images/frame.jpg) where its screen is, in the panel's own grays.
 
 Usage: uv run --python 3.12 --with pillow --with numpy --with requests python tools/hero.py [out.gif]
@@ -66,12 +66,10 @@ def place(screen, plate):
     return layer.filter(ImageFilter.GaussianBlur(0.35))
 
 
-def flash(old, new):
-    """A full refresh as the panel does it: the old picture inverts, black, white, then the new."""
-    inv = Image.eval(old, lambda v: 255 - v)
-    return [inv, inv, Image.new("L", old.size, 0), Image.new("L", old.size, 0),
-            Image.new("L", old.size, 255), Image.new("L", old.size, 255), Image.new("L", old.size, 0),
-            Image.blend(Image.new("L", old.size, 0), new, 0.5), new, new, new]
+def change(old, new):
+    """A new scene fades in over a third of a second. The panel really flashes black and white
+    here, but in a loop that plays every few seconds it pulls the eye from the sky itself."""
+    return [Image.blend(old, new, (i + 1) / 9.0) for i in range(8)]
 
 
 def partial(old, new, n=4):
@@ -94,22 +92,22 @@ def main():
     scenes = [
         ("hold", [render("iss_soon", evening, cfg_path)], 100),
         # Plugged in, a pass redraws every 15 seconds; here every 20 of them, 11 frames each
-        ("flash", [render("iss_soon", evening + 34 * 60 + 20 * i, cfg_path) for i in range(19)], 11),
-        ("flash", [render("late_moon", moon, cfg_path)], 70),
+        ("change", [render("iss_soon", evening + 34 * 60 + 20 * i, cfg_path) for i in range(19)], 11),
+        ("change", [render("late_moon", moon, cfg_path)], 70),
         # The morning's weather balloon from Buffalo, climbing, then falling after it bursts
-        ("flash", [render("day", 1790339100, cfg_path)], 70),
+        ("change", [render("day", 1790339100, cfg_path)], 70),
         ("partial", [render("balloon_burst", 1790341920, cfg_path)], 70),
     ]
     screens, last = [], None
     for how, imgs, hold in scenes:
         for k, img in enumerate(imgs):
             if last is not None:
-                screens += flash(last, img) if how == "flash" and k == 0 else partial(last, img)
+                screens += change(last, img) if how == "change" and k == 0 else partial(last, img)
             screens += [img] * hold
             last = img
     # Back to the first picture, so the loop has no seam
     first = scenes[0][1][0]
-    screens += flash(last, first)
+    screens += change(last, first)
     frames, cache = [], {}
     for s in screens:
         key = s.tobytes().__hash__()
