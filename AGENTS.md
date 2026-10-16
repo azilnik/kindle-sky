@@ -4,6 +4,11 @@ A jailbroken Kindle in a picture frame draws the sky above home. Everything runs
 Kindle; the laptop only previews, builds and deploys. This file is what you can't get from
 reading the code, plus playbooks for what people ask. The README and `docs/` are for humans.
 
+Its sibling, [kindle-planes](https://github.com/azilnik/kindle-planes), runs on the same
+hardware and shares the device code (`loop.py`, `power.py`, `run.sh`, `build/`, `insert/`).
+This repo is where that code is maintained; planes is finished. A Kindle runs one or the
+other; `install.sh` replaces a planes install.
+
 ## Map
 
 | Path | What |

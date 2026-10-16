@@ -2,7 +2,8 @@
 # Install the sky frame on a jailbroken Kindle that answers to `ssh kindle`
 # (docs/device-setup.md). Works out which Kindle it is, puts Python on it, copies the code,
 # writes a config.json if there is none, installs the boot job and starts the display.
-# Safe to run again; over an old kindle-planes install, it moves that one's settings over.
+# Safe to run again. Over a kindle-planes install, the sky's sibling project, it takes that
+# one's place and keeps its settings.
 #   tools/install.sh [--home LAT,LON] [--hold]
 #     --home   where the sky is seen from, for a new config.json (default: Toronto)
 #     --hold   keep the Kindle awake on Wi-Fi afterwards, as tools/deploy.sh --hold does
@@ -12,7 +13,7 @@
 set -e
 cd "$(dirname "$0")/.."
 KINDLE=${KINDLE:-kindle}
-RELEASE=${RELEASE:-https://github.com/azilnik/kindle-planes/releases/latest/download}
+RELEASE=${RELEASE:-https://github.com/azilnik/kindle-sky/releases/latest/download}
 HOME_AT= HOLD=
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -38,9 +39,9 @@ ssh "$KINDLE" 'for f in /mnt/us/libkh/bin/fbink /var/local/kmc/bin/fbink /mnt/us
 # Firmware 5.16.3 and newer is hard-float; older firmware (a PW2 tops out at 5.12) has only
 # the soft-float loader and needs the other bundle
 if ssh "$KINDLE" '[ -e /lib/ld-linux-armhf.so.3 ]'; then
-    NAME=kindle-planes-python-armv7.tar.gz
+    NAME=kindle-sky-python-armv7.tar.gz
 else
-    NAME=kindle-planes-python-armv7-softfloat.tar.gz
+    NAME=kindle-sky-python-armv7-softfloat.tar.gz
 fi
 # A PW2's 758x1024 panel starts from its own config: a wider text panel, and the safe area
 # measured in the 13x18 insert
@@ -74,8 +75,9 @@ else
         touch /mnt/us/python/INSTALLED' || { echo "python: the copy on the Kindle doesn't work, not installed"; exit 1; }
 fi
 
-# This project was kindle-planes, in /mnt/us/planes with a boot job of that name. Stop it
-# and bring its settings, its gift letter and its logs over; the planes code goes
+# kindle-planes (github.com/azilnik/kindle-planes) lives in /mnt/us/planes with a boot job of
+# that name, and a Kindle shows one or the other. Stop it and bring its settings, gift letter
+# and logs over; the planes code goes
 ssh "$KINDLE" 'set -e
     [ -d /mnt/us/planes ] || exit 0
     touch /tmp/planes.stopped
@@ -86,7 +88,7 @@ ssh "$KINDLE" 'set -e
     done
     mntroot rw >/dev/null 2>&1; rm -f /etc/upstart/planes.conf; mntroot ro >/dev/null 2>&1
     rm -rf /mnt/us/planes
-    echo "moved: the old kindle-planes install, settings kept"'
+    echo "replaced: the kindle-planes install, settings kept"'
 
 # deploy.sh never touches config.json, so a first install has to write one
 ssh "$KINDLE" 'mkdir -p /mnt/us/sky'

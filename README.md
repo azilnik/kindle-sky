@@ -17,6 +17,11 @@ two weeks. Everything runs on the Kindle; your computer is only needed to instal
 
 What it shows and how it picks the headline: [docs/sky.md](docs/sky.md).
 
+Sky is the second frame on this hardware. The first,
+[kindle-planes](https://github.com/azilnik/kindle-planes), shows the flights overhead. Living
+with it taught the loop to sleep between redraws and fetch only what it can't work out
+itself, which took a charge from about 5 days to about 13.
+
 ## What you need
 
 - A Kindle Paperwhite 4 (2018) or Paperwhite 2 (2013) that you can jailbreak
@@ -33,7 +38,7 @@ What it shows and how it picks the headline: [docs/sky.md](docs/sky.md).
    own latitude and longitude:
 
    ```bash
-   git clone https://github.com/azilnik/kindle-planes kindle-sky && cd kindle-sky
+   git clone https://github.com/azilnik/kindle-sky && cd kindle-sky
    tools/install.sh --home 43.65,-79.38
    ```
 
@@ -46,8 +51,8 @@ What it shows and how it picks the headline: [docs/sky.md](docs/sky.md).
 Then set which way you face the frame (`heading`), your time zone (`tz`) and how dark your
 sky is (`sky_glow`) in the Kindle's `config.json`: [docs/configuration.md](docs/configuration.md).
 
-Already running kindle-planes? `tools/install.sh` moves it over, settings and gift letter
-included.
+Already running [kindle-planes](https://github.com/azilnik/kindle-planes)? `tools/install.sh`
+takes its place and keeps its settings.
 
 ## Give it as a gift
 

@@ -11,8 +11,9 @@ power.log` prints these numbers from the device's log.
 A Paperwhite 2 spends about a second awake per redraw, against a third of a second on a
 Paperwhite 4: most of it is scaling the canvas down to its smaller panel (`turn()`).
 
-The project started as a planes frame that fetched flight positions every 5 to 10 minutes.
-Its measurements are how the loop got this frugal:
+The loop comes from [kindle-planes](https://github.com/azilnik/kindle-planes), the first frame
+on this hardware, which fetched flight positions every 5 to 10 minutes. Its measurements are
+how the loop got this frugal:
 
 | Setup | Draw | Per charge |
 |---|---|---|

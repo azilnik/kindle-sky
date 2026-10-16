@@ -10,10 +10,10 @@ set -e
 URL=${1:?usage: bundle.sh PYTHON_TARBALL_URL}
 HERE="$(cd "$(dirname "$0")" && pwd)"
 if [ "${FLOAT:-hard}" = soft ]; then
-    WORK="$HERE/../out/py-soft" OUT=kindle-planes-python-armv7-softfloat.tar.gz
+    WORK="$HERE/../out/py-soft" OUT=kindle-sky-python-armv7-softfloat.tar.gz
     PLATFORM=linux/arm/v5 CHECK_IMAGE=arm32v5/debian:bookworm-slim
 else
-    WORK="$HERE/../out/py" OUT=kindle-planes-python-armv7.tar.gz
+    WORK="$HERE/../out/py" OUT=kindle-sky-python-armv7.tar.gz
     PLATFORM=linux/arm/v7 CHECK_IMAGE=arm32v7/debian:bookworm-slim
 fi
 mkdir -p "$WORK"

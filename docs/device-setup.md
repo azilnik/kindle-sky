@@ -48,8 +48,8 @@ tools/install.sh --home 43.65,-79.38
 It's safe to run again. It reads the panel to tell a Paperwhite 4 from a Paperwhite 2, and
 the firmware to pick the right Python, then does four things:
 
-1. **Python.** Downloads `kindle-planes-python-armv7.tar.gz` from the
-   [latest release](https://github.com/azilnik/kindle-planes/releases/latest), checks it,
+1. **Python.** Downloads `kindle-sky-python-armv7.tar.gz` from the
+   [latest release](https://github.com/azilnik/kindle-sky/releases/latest), checks it,
    and unpacks it beside `/mnt/us/python`, tests it, then swaps it in and marks it `INSTALLED`.
    Skipped once a complete copy is there; a copy cut off halfway is never mistaken for one.
 2. **Config.** Writes `/mnt/us/sky/config.json` if there is none, from `sky/config.json`
@@ -59,9 +59,9 @@ the firmware to pick the right Python, then does four things:
    `/mnt/us/sky/DISABLED`.
 4. **Code.** Runs `tools/deploy.sh`, which copies `sky/` and starts the loop.
 
-Over an install from when this project was kindle-planes (`/mnt/us/planes`), it first stops
-that one and moves its `config.json`, gift letter, orbits and power log to `/mnt/us/sky`,
-then removes the old code and boot job.
+On a Kindle running [kindle-planes](https://github.com/azilnik/kindle-planes)
+(`/mnt/us/planes`), it first stops that one and moves its `config.json`, gift letter,
+orbits and power log to `/mnt/us/sky`, then removes the planes code and boot job.
 
 Then set `heading` and `tz` in `config.json` ([configuration.md](configuration.md)). The
 shipped `safe` fits the printed inserts; if yours differs, measure it with
@@ -73,7 +73,7 @@ It's [python-build-standalone](https://github.com/astral-sh/python-build-standal
 for `armv7-unknown-linux-gnueabihf`, with Pillow and requests installed. Pillow is the part
 that can't come from PyPI: the Kindle's libc is glibc 2.20, so it's built in a Debian
 jessie container, with zlib and FreeType only. To build it yourself, with Docker running:
-`build/bundle.sh <URL of the Python tarball>`, then `BUNDLE=out/py/kindle-planes-python-armv7.tar.gz tools/install.sh`.
+`build/bundle.sh <URL of the Python tarball>`, then `BUNDLE=out/py/kindle-sky-python-armv7.tar.gz tools/install.sh`.
 
 The user store is FAT, so there are no symlinks: call `/mnt/us/python/bin/python3.12` by
 its full name (`run.sh` does). Pillow's `stroke_width` segfaults against the Kindle's
@@ -127,7 +127,7 @@ A 2013 Paperwhite (serial starting B0D4 or 90D4) runs the same code. What's diff
 3. **Python.** No prebuilt Python starts on its 3.0 kernel.
    `build/python-softfloat.sh` builds one from source (a couple of hours), then
    `FLOAT=soft build/bundle.sh unused` packs it with Pillow. Install with
-   `BUNDLE=out/py-soft/kindle-planes-python-armv7-softfloat.tar.gz KINDLE=kindle2 tools/install.sh`.
+   `BUNDLE=out/py-soft/kindle-sky-python-armv7-softfloat.tar.gz KINDLE=kindle2 tools/install.sh`.
 4. **Config.** `tools/install.sh` writes `sky/config-pw2.json`, with a wider text panel
    and the `safe` measured in the 13×18 insert. Deep sleep works as on a PW4: about 10 mA
    on average between redraws.
