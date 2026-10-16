@@ -14,7 +14,7 @@ the top end's wall bridges, 34 mm at most.
 Coordinates are insert.py's: x along the frame (0 at its center, + away from the port),
 y up, z back from the mat's front face. The frame's back edge is at z = depth.
 Run:  uv run --python 3.12 --with manifold3d --with numpy --with trimesh --with networkx \\
-          --with lxml python backing.py [pw2]
+          --with lxml python solar.py [pw2]
 """
 
 import math
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     p = dict(P, **KINDLES[kindle])
     L = layout(p, f)
     g, (C, B, x0, x1) = backing(p, f, L)
-    name = "backing-rodalm13x18-" + kindle
+    name = "solar-rodalm13x18-" + kindle
     mesh = export(standing(g, x0), os.path.join(HERE, name))
     b = mesh.bounds[1] - mesh.bounds[0]
     print("%s: %.0f x %.0f x %.0f mm standing, %.1f cm3, watertight %s" % (
