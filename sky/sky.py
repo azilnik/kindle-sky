@@ -431,20 +431,26 @@ def overlaps(a, b):
     return max(0, min(a[2], b[2]) - max(a[0], b[0])) * max(0, min(a[3], b[3]) - max(a[1], b[1]))
 
 
+# Where each name sat last time, beside its mark. Placed from scratch every redraw, a label
+# flipped between near-equal spots as its mark moved; now it stays while it can
+STUCK = {}
+
+
 def side_label(d, x, y, off, s, f, fill, bg, dy=0, must=False):
     """Label beside its mark: the eight places around it, the side facing the dome's center
     first, then the same ring a line further out. A label far from its mark is worse than
     none, so where nothing close is clear it's dropped (False), unless it `must` show,
-    the headline's, which takes the place that overlaps least."""
+    the headline's, which takes the place that overlaps least. Where it sat last time comes
+    first while it's still clear (for the headline's, of everything but a line)."""
     w, h = base.text_w(d, s, f), f.size
-    spots = []
-    for o in (off, off + h):
-        beside = [(x + o, y - h * 0.6 + dy), (x - o - w, y - h * 0.6 + dy)]
+    spots = []  # (which way from the mark, ring, where)
+    for ring, o in enumerate((off, off + h)):
+        beside = [("E", ring, (x + o, y - h * 0.6 + dy)), ("W", ring, (x - o - w, y - h * 0.6 + dy))]
         if x >= DOME_X:
             beside.reverse()
-        spots += beside + [(x - w / 2, y - o - h * 1.1), (x - w / 2, y + o - h * 0.1),
-                           (x + o * 0.7, y - o * 0.7 - h), (x + o * 0.7, y + o * 0.7),
-                           (x - o * 0.7 - w, y - o * 0.7 - h), (x - o * 0.7 - w, y + o * 0.7)]
+        spots += beside + [("N", ring, (x - w / 2, y - o - h * 1.1)), ("S", ring, (x - w / 2, y + o - h * 0.1)),
+                           ("NE", ring, (x + o * 0.7, y - o * 0.7 - h)), ("SE", ring, (x + o * 0.7, y + o * 0.7)),
+                           ("NW", ring, (x - o * 0.7 - w, y - o * 0.7 - h)), ("SW", ring, (x - o * 0.7 - w, y + o * 0.7))]
 
     def box(lx, ly):
         return (lx - 4, ly - 2, lx + w + 4, ly + h * 1.2)
@@ -463,19 +469,25 @@ def side_label(d, x, y, off, s, f, fill, bg, dy=0, must=False):
         mine = gap(b, x, y)
         return all(gap(b, mx, my) >= mine for mx, my in MARKS if math.hypot(mx - x, my - y) > 30)
 
-    on = [sp for sp in spots if inside(sp[0], sp[1] + h / 2, 4) and inside(sp[0] + w, sp[1] + h / 2, 4) and own(sp)]
-    spot = next((sp for sp in on if not overlap(sp, TAKEN + PATHS)), None)
-    if not spot and must:
+    on = [(k, r, sp) for k, r, sp in spots
+          if inside(sp[0], sp[1] + h / 2, 4) and inside(sp[0] + w, sp[1] + h / 2, 4) and own(sp)]
+    was = STUCK.get(s)
+    pick = next((c for c in on if c[:2] == was and not overlap(c[2], TAKEN if must else TAKEN + PATHS)), None)
+    pick = pick or next((c for c in on if not overlap(c[2], TAKEN + PATHS)), None)
+    if not pick and must:
+        pick = next((c for c in on if not overlap(c[2], TAKEN)), None) or \
+            min(on or spots, key=lambda c: overlap(c[2], TAKEN))
+    if not pick:
+        return False
+    STUCK[s] = pick[:2]
+    spot = pick[2]
+    if must:
         # The headline's name crosses a line before it leaves its mark: a gap is cut in the
         # line behind it, and only in the line
-        spot = next((sp for sp in on if not overlap(sp, TAKEN)), None) or \
-            min(on or spots, key=lambda sp: overlap(sp, TAKEN))
         b = box(*spot)
         for t in PATHS:
             if overlaps(b, t):
                 d.rectangle((max(b[0], t[0]), max(b[1], t[1]), min(b[2], t[2]), min(b[3], t[3])), fill=bg)
-    if not spot:
-        return False
     lx, ly = spot
     TAKEN.append(box(lx, ly))
     glow_text(d, (lx, ly), s, f, fill, bg)

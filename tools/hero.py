@@ -16,7 +16,7 @@ import sys
 import tempfile
 
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, os.path.join(ROOT, "sky"))
@@ -58,25 +58,47 @@ def coeffs(src, dst):
 
 
 def tint(screen):
-    """The render in the photo's e-ink grays, its light falling off toward the mat's shadowed
-    top and left."""
+    """The render in the photo's e-ink grays, with the shadow the mat's cut edge throws on the
+    panel: deepest along the top and left, away from the window's light, and a trace at the
+    other edges."""
     g = np.asarray(screen, float)[..., None] / 255.0
     h, w = screen.size[1], screen.size[0]
-    yy, xx = np.mgrid[0:h, 0:w]
-    shade = 1 - 0.10 * np.clip(1 - np.minimum(xx / (0.03 * w), yy / (0.04 * h)), 0, 1) - 0.04 * yy / h
+    yy, xx = np.mgrid[0:h, 0:w].astype(float)
+    reach = 0.022 * w
+    near = np.exp(-xx / reach) * 0.9 + np.exp(-yy / reach)
+    far = np.exp(-(w - 1 - xx) / reach) + np.exp(-(h - 1 - yy) / reach)
+    shade = 1 - 0.22 * np.clip(near, 0, 1) - 0.06 * np.clip(far, 0, 1) - 0.04 * yy / h
     rgb = (INK + (PAPER - INK) * g) * shade[..., None]
     return Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB")
 
 
-def composite(screen, plate, k):
-    """The tinted render warped onto the screen in the photo, with the photo `k` times its size
-    (pass it already scaled): the screen stays sharp however large the photo is drawn."""
-    tinted = tint(screen)
-    w, h = tinted.size
-    c = coeffs([(0, 0), (w, 0), (w, h), (0, h)], [(x * k, y * k) for x, y in QUAD])
-    warped = tinted.transform(plate.size, Image.PERSPECTIVE, tuple(c), Image.BICUBIC)
-    mask = Image.new("L", (w, h), 255).transform(plate.size, Image.PERSPECTIVE, tuple(c), Image.BICUBIC)
-    return Image.composite(warped, plate, mask)
+def composite(screen, plate, k, ss=2):
+    """The tinted render set onto the screen in the photo, with the photo `k` times its size
+    (pass it already scaled), so the screen stays sharp however large the photo is drawn.
+    Warped at `ss` times and brought down, so its lines and letters are smooth, inside an
+    antialiased edge feathered a touch, as a lens sees the edge of the mat's window."""
+    pad = 8
+    # Edge pixels repeated outward: the feathered edge blends into the panel's own gray,
+    # never into black
+    tinted = Image.fromarray(np.pad(np.asarray(tint(screen)), ((pad, pad), (pad, pad), (0, 0)), mode="edge"))
+    w, h = screen.size
+    quad = [(x * k, y * k) for x, y in QUAD]
+    x0, y0 = int(min(x for x, _ in quad)) - 4, int(min(y for _, y in quad)) - 4
+    x1, y1 = int(max(x for x, _ in quad)) + 5, int(max(y for _, y in quad)) + 5
+    bw, bh = x1 - x0, y1 - y0
+    # The quad pushed out by the padding, in the same perspective, so the pad lands past the edge
+    inner = coeffs([(pad, pad), (w + pad, pad), (w + pad, h + pad), (pad, h + pad)],
+                   [((x - x0) * ss, (y - y0) * ss) for x, y in quad])
+    warped = tinted.transform((bw * ss, bh * ss), Image.PERSPECTIVE, tuple(inner), Image.BICUBIC)
+    # As soft as the photo around it at this size: a screen sharper than its own frame reads
+    # as pasted on
+    warped = warped.resize((bw, bh), Image.LANCZOS).filter(ImageFilter.GaussianBlur(0.3 * k))
+    mask = Image.new("L", (bw * 4, bh * 4), 0)
+    ImageDraw.Draw(mask).polygon([((x - x0) * 4, (y - y0) * 4) for x, y in quad], fill=255)
+    mask = mask.resize((bw, bh), Image.LANCZOS).filter(ImageFilter.GaussianBlur(0.3 * k))
+    out = plate.copy()
+    out.paste(Image.composite(warped, out.crop((x0, y0, x1, y1)), mask), (x0, y0))
+    return out
 
 
 def place(screen, plate):
@@ -91,9 +113,10 @@ def change(old, new):
     return [Image.blend(old, new, (i + 1) / 9.0) for i in range(8)]
 
 
-def partial(old, new, n=4):
-    """A partial update: the changed parts settle over a few frames."""
-    return [Image.blend(old, new, (i + 1) / n) for i in range(n)]
+def partial(old, new):
+    """A partial update snaps, as the panel's does: blended, a moving mark and its label
+    show twice for a moment."""
+    return []
 
 
 def setup():
