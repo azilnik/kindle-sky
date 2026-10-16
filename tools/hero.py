@@ -1,6 +1,7 @@
-"""The README's hero: the sky frame on the kitchen counter, a day in 25 seconds. The ISS is
-due tonight, then crosses the dome with a Starlink train beside it; the Harvest Moon after
-midnight; the morning's weather balloon climbing, then falling. Renders come from the
+"""The README's hero: the sky frame on the kitchen counter, a day in 22 seconds, as a loop.
+The ISS is due tonight, then crosses the dome with a Starlink train beside it; the full
+moon late that night; the next morning's weather balloon climbing, then falling; and the
+evening again. Renders come from the
 samples, set into the photo of the frame (docs/images/frame.jpg) where its screen is, in the
 panel's own grays.
 
@@ -16,7 +17,7 @@ import sys
 import tempfile
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, os.path.join(ROOT, "sky"))
@@ -31,15 +32,23 @@ FPS_MS = 40
 QUAD = [(227, 153), (581, 160), (574, 435), (230, 421)]
 # The photo's e-ink: its white is a cool gray and its black a warm dark gray
 PAPER = np.array([158, 166, 167], float)
-INK = np.array([50, 45, 41], float)
+INK = np.array([46, 44, 42], float)
 # The mat window in the photo is wider than today's insert's: a `safe` of the same shape
 SAFE = [16, 34, 1302, 1030]
 
 
-def render(sample, t):
+def render(sample, t, days=0, balloon=True):
+    """A sample at time t; `days` moves its weather balloon that many days on, with t, so
+    the screens follow one another and what each says is next is what comes next."""
     with open(os.path.join(SAMPLES, sample + ".json")) as f:
         data = json.load(f)
-    return sky.render(data, t)[0].convert("L").crop(SAFE)
+    if not balloon:
+        data.pop("balloon", None)
+    b, d = data.get("balloon"), days * 86400
+    if b and d:
+        b["track"] = [[f[0] + d] + f[1:] for f in b["track"]]
+        b["launched"] += d
+    return sky.render(data, t + d)[0].convert("L").crop(SAFE)
 
 
 def pass_end(sample, t):
@@ -68,8 +77,24 @@ def tint(screen):
     near = np.exp(-xx / reach) * 0.9 + np.exp(-yy / reach)
     far = np.exp(-(w - 1 - xx) / reach) + np.exp(-(h - 1 - yy) / reach)
     shade = 1 - 0.22 * np.clip(near, 0, 1) - 0.06 * np.clip(far, 0, 1) - 0.04 * yy / h
-    rgb = (INK + (PAPER - INK) * g) * shade[..., None]
+    rgb = (INK + (PAPER - INK) * g) * shade[..., None] + panel_grain(w, h)[..., None]
     return Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB")
+
+
+_grain = {}
+
+
+def panel_grain(w, h):
+    """E-ink's own surface: a faint mottle, a little uneven across the panel, the same in every
+    frame because it's in the panel, not the camera. A perfectly even fill reads as pasted on."""
+    if (w, h) not in _grain:
+        rng = np.random.default_rng(3)
+        blotch = Image.fromarray(rng.normal(128, 40, (h // 24, w // 24)).clip(0, 255).astype(np.uint8))
+        blotch = np.asarray(blotch.resize((w, h), Image.BICUBIC), float) - 128
+        fine = np.asarray(Image.fromarray(rng.normal(128, 40, (h // 2, w // 2)).clip(0, 255).astype(np.uint8))
+                          .resize((w, h), Image.BILINEAR), float) - 128
+        _grain[w, h] = blotch * 0.025 + fine * 0.02
+    return _grain[w, h]
 
 
 def composite(screen, plate, k, ss=2):
@@ -92,10 +117,11 @@ def composite(screen, plate, k, ss=2):
     warped = tinted.transform((bw * ss, bh * ss), Image.PERSPECTIVE, tuple(inner), Image.BICUBIC)
     # As soft as the photo around it at this size: a screen sharper than its own frame reads
     # as pasted on
-    warped = warped.resize((bw, bh), Image.LANCZOS).filter(ImageFilter.GaussianBlur(0.3 * k))
+    # BOX, not LANCZOS: Lanczos rings, and a bright halo along the panel's edge gives it away
+    warped = warped.resize((bw, bh), Image.BOX).filter(ImageFilter.GaussianBlur(0.45 * k))
     mask = Image.new("L", (bw * 4, bh * 4), 0)
     ImageDraw.Draw(mask).polygon([((x - x0) * 4, (y - y0) * 4) for x, y in quad], fill=255)
-    mask = mask.resize((bw, bh), Image.LANCZOS).filter(ImageFilter.GaussianBlur(0.3 * k))
+    mask = mask.resize((bw, bh), Image.BOX).filter(ImageFilter.GaussianBlur(0.3 * k))
     out = plate.copy()
     out.paste(Image.composite(warped, out.crop((x0, y0, x1, y1)), mask), (x0, y0))
     return out
@@ -107,16 +133,44 @@ def place(screen, plate):
     return big.resize(plate.size, Image.LANCZOS).filter(ImageFilter.GaussianBlur(0.35))
 
 
+GHOST = 0.025
+
+
 def change(old, new):
-    """A new scene fades in over a third of a second. The panel really flashes black and white
-    here, but in a loop that plays every few seconds it pulls the eye from the sky itself."""
-    return [Image.blend(old, new, (i + 1) / 9.0) for i in range(8)]
+    """A new page as e-ink draws one, over three frames (120 ms, a panel's partial refresh):
+    what's leaving goes dark first, then what's arriving comes up. Never both at once, so
+    nothing is double-exposed, and no black-and-white flash: in a loop that plays every few
+    seconds that pulls the eye from the sky itself. The old page then stays as a faint ghost
+    (ghosted())."""
+    erased = ImageChops.darker(old, new)
+    return [Image.blend(old, erased, 0.6), erased, Image.blend(erased, new, 0.6)]
+
+
+def ghosted(frames):
+    """Every frame after a page change carries the page before it at GHOST, as a panel's
+    partial refresh leaves it, until the next page; the opening carries the closing page's,
+    so the loop wraps onto the very picture it left."""
+    out, ghost, page, made = [], None, None, {}
+    pages = [p for p, _, kind in frames if kind == "page"]
+    ghost = pages[-2] if len(pages) > 1 else None
+    for img, scene, kind in frames:
+        if kind == "page" and page is not None and img is not page:
+            ghost = page
+        if kind == "page":
+            page = img
+        if ghost is not None:
+            # The same blend object for a held picture, so callers can tell it hasn't changed
+            key = (id(img), id(ghost))
+            if key not in made:
+                made[key] = Image.blend(img, ghost, GHOST)
+            img = made[key]
+        out.append((img, scene))
+    return out
 
 
 def partial(old, new):
-    """A partial update snaps, as the panel's does: blended, a moving mark and its label
-    show twice for a moment."""
-    return []
+    """A small update (the ISS a step on) redraws the same way, erase then draw."""
+    return change(old, new)
 
 
 def setup():
@@ -131,32 +185,43 @@ def setup():
 
 
 def timeline(loop=True):
-    """The screen at every frame, FPS_MS apart, and which scene each frame belongs to."""
-    evening = 1790465100                  # the iss_soon sample: 7:25 pm, ISS overhead at 8:01
-    moon = 1790400600                     # the late_moon sample: 1:30 am, the Harvest Moon
-    first = render("iss_soon", evening)
+    """The screen at every frame, FPS_MS apart, and which scene each frame belongs to. A
+    Saturday evening into Sunday morning: the ISS due at 8:01, its pass, the full moon at
+    10:30, the morning's weather balloon, and the loop back to the evening. Each screen's
+    "Next" and "Up ahead" agree with the ones after it."""
+    # The iss_soon sample at its own 7:25 pm: the ISS due at 8:01. Any later and a smaller
+    # Starlink train at 7:38 takes the headline
+    evening = 1790465100
+    moon = 1790400600 + 21 * 3600         # the late_moon sample's Saturday, at 10:30 pm: the full moon
+    # The sample's own evening balloon is left out: its data goes stale before the pass, and
+    # it would vanish from the dome mid-scene
+    first = render("iss_soon", evening, balloon=False)
     # From a minute before it rises to the moment it sets, every 20 s (the Kindle's every 15 s,
     # plugged in), 11 frames each
-    rise, sets = evening + 34 * 60, pass_end("iss_soon", evening)
+    rise, sets = 1790465100 + 34 * 60, pass_end("iss_soon", evening)
     scenes = [
-        ("hold", [first], 100),
-        ("change", [render("iss_soon", tt) for tt in range(rise, int(sets) + 1, 20)], 11),
-        ("change", [render("late_moon", moon)], 70),
-        # The morning's weather balloon from Buffalo, climbing, then falling after it bursts
-        ("change", [render("day", 1790339100)], 70),
-        ("partial", [render("balloon_burst", 1790341920)], 70),
+        ("hold", [first], 95),
+        ("change", [render("iss_soon", tt, balloon=False) for tt in range(rise, int(sets) + 1, 20)], 11),
+        ("change", [render("late_moon", moon)], 85),
+        # Friday's balloon from Buffalo, moved to Sunday morning: climbing, then falling. The
+        # loop then wraps to Saturday evening, the one place the clock goes back
+        ("change", [render("day", 1790339100, days=2)], 70),
+        ("change", [render("balloon_burst", 1790341920, days=2)], 70),
     ]
-    screens, last = [], None
+    frames, last = [], None
     for n, (how, imgs, hold) in enumerate(scenes):
         for k, img in enumerate(imgs):
             if last is not None:
-                screens += [(s, n) for s in (change(last, img) if how == "change" and k == 0 else partial(last, img))]
-            screens += [(img, n)] * hold
+                between = change(last, img) if how == "change" and k == 0 else partial(last, img)
+                frames += [(b, n, "between") for b in between]
+            # A new page leaves a ghost; the pass's small steps redraw over the same page
+            kind = "page" if k == 0 else "step"
+            frames += [(img, n, kind)] * hold
             last = img
     if loop:
-        # Back to the first picture, so the loop has no seam
-        screens += [(s, 0) for s in change(last, first)]
-    return screens
+        # Back to the first picture, so the loop wraps onto the frame it started from
+        frames += [(b, 0, "between") for b in change(last, first)] + [(first, 0, "page")]
+    return ghosted(frames)
 
 
 def main():

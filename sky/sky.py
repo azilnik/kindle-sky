@@ -209,10 +209,10 @@ def build(data, t):
                              ends=lambda tr: tr["end"])
     if tr and tr["start"] - 60 <= t <= tr["end"] and sky["sun_el"] < -6:
         # Only while a train is crossing is it worth placing each satellite
-        for sat in sats["fleet"]:
+        for n, sat in enumerate(sats["fleet"]):
             look = astro.sat_look(sat, t, lat, lon)
             if look and look[0] >= 10 and look[4]:
-                add(dict(kind="train", name="Starlink", el=look[0], az=look[1], km=look[2]))
+                add(dict(kind="train", name="Starlink", el=look[0], az=look[1], km=look[2], sat=n))
 
     if not moon.get("below"):
         moon["sets"] = kept("moonset", t, None, 3600, lambda: crossing(moon_el, t, rising=False),
@@ -434,6 +434,7 @@ def overlaps(a, b):
 # Where each name sat last time, beside its mark. Placed from scratch every redraw, a label
 # flipped between near-equal spots as its mark moved; now it stays while it can
 STUCK = {}
+TRAIN_LABEL = {}           # which of the train's satellites carries its name
 
 
 def side_label(d, x, y, off, s, f, fill, bg, dy=0, must=False):
@@ -759,13 +760,23 @@ def draw_dome(img, d, sky):
 
     if tr:
         # A bead for each one up right now, on the path drawn with the others above
-        beads = [(dome_xy(th["el"], th["az"]), th["km"]) for th in up if th["kind"] == "train"]
-        for (x, y), _ in beads:
+        beads = [(dome_xy(th["el"], th["az"]), th["km"], th["sat"]) for th in up if th["kind"] == "train"]
+        for (x, y), _, _ in beads:
             icons.paste(img, icons.glyph("satellite", 30, lit("train")), x, y, dome)
         if beads:
-            at = min(beads, key=lambda b: b[0][1])[0]
+            # The name goes on the train itself: a satellite on its drawn path (the fleet has
+            # strays elsewhere in the sky), and the same one while it's in sight, rather than
+            # whichever is highest this minute, which swaps as the train turns
+            line = [dome_xy(k[1], k[2]) for k in tr["track"]]
+
+            def off_path(b):
+                return min(math.hypot(b[0][0] - px, b[0][1] - py) for px, py in line)
+
+            on = [b for b in beads if off_path(b) < 30] or beads
+            at, _, n = next((b for b in on if b[2] == TRAIN_LABEL.get("sat")), min(on, key=lambda b: b[0][1]))
+            TRAIN_LABEL["sat"] = n
             labels.append((hk == "train", at[0], at[1], 26, "Starlink", BLABEL, lit("train"), 0,
-                           [("Starlink", min(km for _, km in beads), "train")]))
+                           [("Starlink", min(km for _, km, _ in beads), "train")]))
 
     for th in up:
         if th["kind"] in ("pico", "balloon"):
