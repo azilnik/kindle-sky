@@ -217,22 +217,49 @@ def sleep_until(when, suspend=False):
     """Idle until `when` (epoch). With suspend on, the Kindle deep-sleeps and the RTC
     alarm wakes it. Returns "rtc", "button" (woke early: someone pressed power), "idle", or
     "refused" when the kernel wouldn't suspend and it waited awake instead."""
-    left = when - time.time()
-    if left <= 0:
-        return "idle"
-    if suspend and KINDLE and left > 8 and not held():
-        return _suspend(when)
-    return _wait_awake(when)
+    while True:
+        left = when - time.time()
+        if left <= 0:
+            return "idle"
+        if not (suspend and KINDLE and left > 8 and not held()):
+            return _wait_awake(when)
+        went = time.time()
+        woke = _suspend(when)
+        if woke != "early":
+            return woke
+        # Woken by something else, so sleep again for what's left. A solar panel in weak
+        # light hovers at the charger's threshold and sets off its interrupt over a hundred
+        # times a second (PW2, 2026-10-09): when it wakes at once, wait awake instead
+        if time.time() - went < 2:
+            return _wait_awake(when)
 
 
-def _wait_awake(when):
-    """Sleep awake until `when`, returning "button" early if power is pressed."""
+def _open_keys():
     fds = []
     for path in POWER_KEYS if KINDLE else ():
         try:
             fds.append(os.open(path, os.O_RDONLY | os.O_NONBLOCK))
         except OSError:
             pass
+    return fds
+
+
+def _pressed(fd):
+    try:
+        data = os.read(fd, 16 * 64)
+    except OSError:
+        return False
+    # struct input_event on armhf: timeval (2 x int32), type, code (u16), value (s32)
+    for i in range(0, len(data) - 15, 16):
+        etype, code, value = struct.unpack_from("HHi", data, i + 8)
+        if etype == 1 and code == KEY_POWER and value == 1:
+            return True
+    return False
+
+
+def _wait_awake(when):
+    """Sleep awake until `when`, returning "button" early if power is pressed."""
+    fds = _open_keys()
     try:
         while True:
             left = when - time.time()
@@ -242,12 +269,8 @@ def _wait_awake(when):
                 time.sleep(left)
                 return "idle"
             for fd in select.select(fds, [], [], left)[0]:
-                data = os.read(fd, 16 * 64)
-                # struct input_event on armhf: timeval (2 x int32), type, code (u16), value (s32)
-                for i in range(0, len(data) - 15, 16):
-                    etype, code, value = struct.unpack_from("HHi", data, i + 8)
-                    if etype == 1 and code == KEY_POWER and value == 1:
-                        return "button"
+                if _pressed(fd):
+                    return "button"
     finally:
         for fd in fds:
             os.close(fd)
@@ -271,6 +294,8 @@ def _suspend(when):
         log("suspend_refused", step="alarm", err=err)
         return _refused(when)
     os.sync()
+    # Open across the suspend, so the press that wakes it is waiting to be read
+    fds = _open_keys()
     try:
         with open("/sys/power/state", "w") as f:
             f.write("mem")  # blocks until resume
@@ -279,12 +304,20 @@ def _suspend(when):
         # the battery died, without a word in the log. Say why; the loop reboots if it lasts
         log("suspend_refused", step="mem", err=errno.errorcode.get(e.errno, e.errno))
         return _refused(when)
+    finally:
+        pressed = any([_pressed(fd) for fd in fds])
+        for fd in fds:
+            os.close(fd)
+    if pressed:
+        return "button"
     if time.time() >= when - 5:
         # The alarm has one-second resolution and tends to fire just early; wait out the
         # remainder here so the loop doesn't draw the same minute twice
         time.sleep(max(0, when - time.time()))
         return "rtc"
-    return "button"
+    # Early with no press read. On a charger that's its interrupt; on battery, nothing else
+    # wakes it, so count it as the power button in case the press was missed
+    return "early" if on_ac() else "button"
 
 
 def _refused(when):
