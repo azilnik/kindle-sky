@@ -21,7 +21,7 @@ other; `install.sh` replaces a planes install.
 | `sky/run.sh`, `sky/sky.conf` | Supervisor and upstart boot job, on the device |
 | `sky/config.json`, `config-pw2.json` | First configs for each model; the device keeps its own copy |
 | `sky/samples/*.json` | Frozen sky data with its own timestamp, for previews |
-| `tools/` | `install.sh`, `deploy.sh`, `check.sh`, `simulate.py`, `gift.sh`, `grid.sh`, `fbshot.sh`, `battery.py`, `hero.py`, which rebuilds the README's GIF from the samples after a visual change, and `promo.py`, the same as a square video for social feeds |
+| `tools/` | `install.sh`, `deploy.sh`, `check.sh`, `simulate.py`, `gift.sh`, `grid.sh`, `fbshot.sh`, `battery.py`, and `hero.py`, which rebuilds the README's GIF from the samples after a visual change |
 | `insert/` | 3D-printed parts (manifold3d scripts and their meshes); `docs/frame.md` says what to print |
 | `build/` | How the Kindle's Python bundles are built (Docker, hours; rarely needed) |
 

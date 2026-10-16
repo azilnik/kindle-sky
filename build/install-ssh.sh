@@ -3,11 +3,11 @@
 # Author: kindle-sky
 # UseHooks
 
-# Installs USBNetLite (dropbear) from /mnt/us/claude-bootstrap with key-only login
+# Installs USBNetLite (dropbear) from /mnt/us/kindle-usbnet with key-only login
 # over Wi-Fi and autostart. Idempotent. on_install fires when the library indexes
 # this file, so it may complete with zero taps.
 
-CB=/mnt/us/claude-bootstrap
+CB=/mnt/us/kindle-usbnet
 LOG="$CB/log.txt"
 
 cb_setup() {

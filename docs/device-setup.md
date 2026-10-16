@@ -16,9 +16,9 @@ book, open it. Do not update the firmware afterwards.
 ## 2. SSH over Wi-Fi
 
 `build/install-ssh.sh` is a KUAL scriptlet. Put it in `documents/` with a folder
-`/mnt/us/claude-bootstrap/` holding `unl.tar` (notmarek's USBNetLite) and your public key
+`/mnt/us/kindle-usbnet/` holding `unl.tar` (notmarek's USBNetLite) and your public key
 as `authorized_keys`. Opening the scriptlet installs dropbear, key-only login, root, and
-starts it at boot. It writes the Kindle's IP to `claude-bootstrap/ip.txt`.
+starts it at boot. It writes the Kindle's IP to `kindle-usbnet/ip.txt`.
 
 On your computer, add a host to `~/.ssh/config`:
 
