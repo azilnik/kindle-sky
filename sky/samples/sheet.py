@@ -1,7 +1,6 @@
-"""Render every sample in one style and tile them into a contact sheet.
-Usage: sheet.py STYLE out.png [--panel WxH] [--config FILE]
-STYLE is a planes style, or "sky" for the sky frame's samples in sky/.
---panel 758x1024 and --config planes/config-pw2.json show a PW2."""
+"""Render every sample and tile them into a contact sheet, cropped to what the mat shows.
+Usage: sheet.py out.png [--panel WxH] [--config FILE]
+--panel 758x1024 and --config sky/config-pw2.json show a PW2."""
 import glob
 import json
 import os
@@ -11,31 +10,23 @@ import sys
 from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PLANES = os.path.join(HERE, "..")
+SKY = os.path.join(HERE, "..")
 args = sys.argv[1:]
 panel = args[args.index("--panel") + 1] if "--panel" in args else None
-config = args[args.index("--config") + 1] if "--config" in args else os.path.join(PLANES, "config.json")
-style, out = args[0], args[1]
+config = args[args.index("--config") + 1] if "--config" in args else os.path.join(SKY, "config.json")
+out = args[0]
 with open(config) as f:
     SAFE = tuple(json.load(f)["safe"])
 # The panel is the PW4's canvas scaled; so is the crop
 scale = int(panel.split("x")[1]) / 1448.0 if panel else 1.0
 SAFE = tuple(round(v * scale) for v in SAFE)
-label_font = ImageFont.truetype(os.path.join(PLANES, "fonts", "Inter-SemiBold.ttf"), 22)
+label_font = ImageFont.truetype(os.path.join(SKY, "fonts", "IBMPlexSans-SemiBold.ttf"), 22)
 
-sky = style == "sky"
 tiles = []
-for path in sorted(glob.glob(os.path.join(HERE, "sky" if sky else "", "*.json"))):
+for path in sorted(glob.glob(os.path.join(HERE, "*.json"))):
     name = os.path.basename(path)[:-5]
-    if name == "base":
-        continue
     png = "/tmp/sample_%s.png" % name
-    if sky:
-        cmd = [sys.executable, os.path.join(PLANES, "sky.py"), "--sample", path]
-    else:
-        cmd = [sys.executable, os.path.join(PLANES, "planes.py"), "--sample", path, "--style", style] + \
-            (["--night"] if name == "night" else [])
-    cmd += ["--rotate", "0", "--out", png, "--config", config]
+    cmd = [sys.executable, os.path.join(SKY, "sky.py"), "--sample", path, "--rotate", "0", "--out", png, "--config", config]
     if panel:
         cmd += ["--panel", panel]
     subprocess.check_call(cmd, stdout=subprocess.DEVNULL)

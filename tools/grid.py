@@ -1,7 +1,7 @@
 """Test pattern for measuring `safe`, the part of the screen a frame leaves visible.
 
 Lines every 20 px, heavy and labeled every 100, in the 1448x1072 landscape canvas, turned
-onto the panel like planes.py does. Labels say which axis they are (x300, y400), so a photo
+onto the panel like loop.py does. Labels say which axis they are (x300, y400), so a photo
 of any strip of the screen can be read without seeing the rest.
 
 With --safe it draws that box instead, to check a measurement: all four sides of the border
@@ -9,7 +9,7 @@ should be visible, right at the edge of the mat. The map runs to that box; text 
 (12 px, config.json "inset") further in by itself.
 
 Coordinates are always the 1448x1072 canvas; --panel scales the picture for a smaller
-Kindle the way planes.py does, so the numbers still mean the same thing.
+Kindle the way loop.py does, so the numbers still mean the same thing.
 
 Usage: grid.py ROTATE out.png [--safe X0,Y0,X1,Y1] [--panel WxH]
 tools/grid.sh puts it on the Kindle."""
@@ -23,7 +23,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def font(size):
-    return ImageFont.truetype(os.path.join(ROOT, "planes/fonts/Inter-Bold.ttf"), size)
+    return ImageFont.truetype(os.path.join(ROOT, "sky/fonts/IBMPlexSans-Bold.ttf"), size)
 
 
 def notice(d, lines, size=30):

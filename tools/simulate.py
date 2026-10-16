@@ -15,17 +15,17 @@ import tempfile
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PLANES = os.path.join(HERE, "..", "planes")
-sys.path.insert(0, PLANES)
+SKY = os.path.join(HERE, "..", "sky")
+sys.path.insert(0, SKY)
 os.environ["TZ"] = "EST5EDT,M3.2.0,M11.1.0"
 time.tzset()
 
+import base  # noqa: E402
 import loop  # noqa: E402
 import power  # noqa: E402
 import requests  # noqa: E402
-import sky  # noqa: E402
 
-import planes as P  # noqa: E402
+import sky  # noqa: E402
 
 
 def local(s):
@@ -127,9 +127,9 @@ def install_fakes():
     power.log = lambda kind, **kw: SIM.log.append((SIM.clock, kind, kw))
     loop.show = lambda path, flash: SIM.shows.append((SIM.clock, flash))
     loop.turn = lambda img, rotate: type("Img", (), {"save": lambda self, path: None})()
-    P.in_night = lambda now: SIM.night(now)
+    base.in_night = lambda now: SIM.night(now)
     requests.Session = Session
-    # The frame saves balloon.json beside itself: keep the simulated flight out of planes/
+    # The frame saves balloon.json beside itself: keep the simulated flight out of sky/
     sky.BALLOON_PATH = os.path.join(tempfile.mkdtemp(), "balloon.json")
 
 
@@ -145,7 +145,7 @@ class Args:
 
 def frame(start, sample):
     """A sky frame on a sample's orbits, everything fetched as of start except balloons."""
-    with open(os.path.join(PLANES, "samples", "sky", sample + ".json")) as f:
+    with open(os.path.join(SKY, "samples", sample + ".json")) as f:
         d = json.load(f)
     fr = sky.Frame(Args())
     fr.orbits, fr.orbits_at, fr.balloon = d.get("orbits") or d.get("tle", ""), start, None
@@ -208,7 +208,7 @@ def s_battery():
 
 def s_near_landing():
     # Launched about 20 km from home and drifting east: it comes down above the horizon
-    site = (P.HOME_LAT - 0.15, P.HOME_LON - 0.2)
+    site = (base.HOME_LAT - 0.15, base.HOME_LON - 0.2)
     SIM.flight = lambda t: flight(t, site=site)
     start = local("2026-09-25 08:30")
     run(frame(start, "midday"), start, 120)
@@ -294,7 +294,7 @@ def s_render_fails():
 
 
 def s_no_hooks():
-    """The planes frame has no screen_key or mood: plugged in, it redraws every minute."""
+    """A frame without screen_key or mood: plugged in, it redraws every minute."""
     start = local("2026-09-25 13:00")
     inner = frame(start, "midday")
 

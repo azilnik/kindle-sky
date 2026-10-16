@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Fetch the sky frame's icon fonts and cut them down to the glyphs it uses.
 Run on the Mac:  uv run --with fonttools python tools/icon_fonts.py
-Writes planes/fonts/{phosphor-fill,tabler-filled,weather-icons}.ttf, their licenses,
-and planes/fonts/icons.json (icon name -> [font, codepoint]) for planes/icons.py."""
+Writes sky/fonts/{phosphor-fill,tabler-filled,weather-icons}.ttf, their licenses,
+and sky/fonts/icons.json (icon name -> [font, codepoint]) for sky/icons.py."""
 import json
 import os
 import re
@@ -11,7 +11,7 @@ import urllib.request
 from fontTools import subset
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-FONTS = os.path.join(HERE, "..", "planes", "fonts")
+FONTS = os.path.join(HERE, "..", "sky", "fonts")
 CDN = "https://cdn.jsdelivr.net/"
 
 PACKS = {

@@ -3,18 +3,18 @@
 # Press the Kindle's power button once first: that opens a 10-minute Wi-Fi window.
 #   grid.sh          show the grid
 #   grid.sh check    show the `safe` box from the Kindle's config.json
-#   grid.sh done     back to planes
+#   grid.sh done     back to the sky
 set -e
 cd "$(dirname "$0")/.."
 KINDLE=${KINDLE:-kindle}
 
 if [ "$1" = "done" ]; then
-    ssh "$KINDLE" 'rm -f /mnt/us/planes/HOLD /tmp/grid.png; sh /mnt/us/planes/run.sh'
-    echo "planes are back within a minute"
+    ssh "$KINDLE" 'rm -f /mnt/us/sky/HOLD /tmp/grid.png; sh /mnt/us/sky/run.sh'
+    echo "the sky is back within a minute"
     exit 0
 fi
 
-CFG=$(ssh -o ConnectTimeout=6 "$KINDLE" 'cat /mnt/us/planes/config.json') || {
+CFG=$(ssh -o ConnectTimeout=6 "$KINDLE" 'cat /mnt/us/sky/config.json') || {
     echo "can't reach the Kindle: press its power button once and try again"; exit 1; }
 ROTATE=$(echo "$CFG" | sed -n 's/.*"rotate": *\([0-9]*\).*/\1/p')
 SAFE=$(echo "$CFG" | tr -d ' \n' | sed -n 's/.*"safe":\[\([0-9,]*\)\].*/\1/p')
@@ -30,8 +30,8 @@ uv run -q --python 3.9 --with 'pillow==9.0.1' python tools/grid.py "${ROTATE:-27
     ${PANEL:+--panel "$PANEL"} "$@" >/dev/null
 
 # The loop would draw over the pattern within a minute, so stop it; HOLD is left for
-# `grid.sh done` to clear. fbink -w: wait for the panel, as planes.py does.
-ssh "$KINDLE" 'kill $(cat /tmp/planes.pid) 2>/dev/null; rm -f /tmp/planes.pid; cat > /tmp/grid.png
+# `grid.sh done` to clear. fbink -w: wait for the panel, as loop.py does.
+ssh "$KINDLE" 'touch /mnt/us/sky/HOLD; kill $(cat /tmp/sky.pid) 2>/dev/null; rm -f /tmp/sky.pid; cat > /tmp/grid.png
     for f in /mnt/us/libkh/bin/fbink /var/local/kmc/bin/fbink /mnt/us/usbnet/bin/fbink; do
         [ -x "$f" ] && exec "$f" -q -w -f -g file=/tmp/grid.png
     done

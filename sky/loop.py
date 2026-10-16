@@ -1,6 +1,6 @@
-"""The screen loop every frame shares: wake, fetch over Wi-Fi when due, draw, push to the
-e-ink panel, sleep, and the night and low-battery rest. A frame (planes.py, sky.py)
-supplies the data and the pictures; this owns timing, power and Wi-Fi recovery, which
+"""The screen loop: wake, fetch over Wi-Fi when due, draw, push to the e-ink panel, sleep,
+and the night and low-battery rest. The frame (sky.py's Frame) supplies the data and the
+pictures; this owns timing, power and Wi-Fi recovery, which
 were hard won on the device (docs/power.md).
 
 A frame is an object with:
@@ -24,7 +24,7 @@ gift opening), which then redraws at once instead of holding awake. The loop
 sets `plugged` on the frame each round, so it can fetch faster on a charger. Optionally
 `next_due(now)`: when its next fetch falls due, so the morning after the quiet hours
 waits for it rather than joining Wi-Fi with nothing to fetch (the sky frame computes
-most of what it shows; planes always has something to fetch by morning).
+most of what it shows).
 
 Plugged in, battery doesn't matter: Wi-Fi stays up (SSH works without the power button),
 the Kindle never suspends, and the picture redraws every minute. Anything on a shared rate
@@ -55,13 +55,13 @@ DRAW_S = 60
 FULL_REFRESH_S = 1800     # a full e-ink flash this often to clear ghosting
 NIGHT_WAKE_S = 1800       # brief wakes at night so no single suspend runs for hours
 REFUSED_REBOOT_S = 1200   # suspend refused this long in a row: reboot, as for a dead link
-MAX_BACKOFF_S = 600       # adsb.lol rate-limits; failures back off to this
+MAX_BACKOFF_S = 600       # failures back off to this, gentle on the servers we share
 LIVE_S = 15               # plugged in, the redraw while something crosses the sky
 CALM_REDRAW_S = 900       # plugged in, the longest a still screen goes without a redraw
 GHOST_PARTIALS = 40       # partial updates before a full flash clears the ghosting
 LOW_BATTERY = 5
 LOW_BATTERY_RESUME = 10
-UA = {"User-Agent": "kindle-planes/0.1 (home display)"}
+UA = {"User-Agent": "kindle-sky/1.0 (home display)"}
 
 FBINK = None
 for cand in ("/mnt/us/libkh/bin/fbink", "/var/local/kmc/bin/fbink", "/mnt/us/usbnet/bin/fbink", "fbink"):
@@ -141,7 +141,7 @@ def run(frame, args):
     session = requests.Session()
     session.headers.update(UA)
     # PGM: uncompressed, 7 ms to write on the Kindle where PNG took 500+
-    frame_path = args.out or "/tmp/planes.pgm"
+    frame_path = args.out or "/tmp/sky.pgm"
     night_drawn = ""
     low = False
     started, hold_until, hold_started = time.time(), 0, 0

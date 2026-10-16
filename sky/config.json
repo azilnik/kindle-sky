@@ -1,9 +1,6 @@
 {
-  "style": "bold-right",
   "lat": 43.6535,
   "lon": -79.3839,
-  "city": "Toronto",
-  "airports": [["YYZ", 43.6777, -79.6248], ["YTZ", 43.6275, -79.3962]],
   "heading": 0,
   "rotate": 270,
   "safe": [16, 10, 1302, 1058],

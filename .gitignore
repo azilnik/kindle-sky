@@ -1,17 +1,13 @@
 # Written on the device at runtime
-planes/cache.json
-planes/traffic.json
-planes/tracks.json*
-planes/orbits.csv*
-planes/balloon.json*
-planes/gift.txt
-planes/gift.seen
-planes/gift.date
-planes/power.log*
-planes/ssh.log
-planes/HOLD
-planes/DISABLED
-planes/measure_start
+sky/orbits.csv*
+sky/balloon.json*
+sky/gift.txt
+sky/gift.seen
+sky/gift.date
+sky/power.log*
+sky/ssh.log
+sky/HOLD
+sky/DISABLED
 __pycache__/
 .DS_Store
 out/

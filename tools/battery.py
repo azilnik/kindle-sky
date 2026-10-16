@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Summarize the Kindle's power.log: measured drain, days per charge, and where awake
-time goes. Usage: battery.py power.log [since_epoch]   (scp kindle:/mnt/us/planes/power.log .)"""
+time goes. Usage: battery.py power.log [since_epoch]   (scp kindle:/mnt/us/sky/power.log .)"""
 import sys
 import time
 

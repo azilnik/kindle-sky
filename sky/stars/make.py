@@ -1,6 +1,6 @@
 """Build stars.json (the bright stars and their names) from d3-celestial's data (BSD-3,
 LICENSE beside this).
-Run on the Mac: python3 planes/stars/make.py. The Kindle only ever reads the output."""
+Run on the Mac: python3 sky/stars/make.py. The Kindle only ever reads the output."""
 import json
 import os
 import urllib.request
