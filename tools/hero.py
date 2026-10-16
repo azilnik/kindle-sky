@@ -1,15 +1,17 @@
 """The README's hero: the sky frame on the kitchen counter, a day in 25 seconds. The ISS is
 due tonight, then crosses the dome with a Starlink train beside it; the Harvest Moon after
-midnight; the morning's weather balloon climbing, then falling. Renders come from the samples, set into the photo of the frame
-(docs/images/frame.jpg) where its screen is, in the panel's own grays.
+midnight; the morning's weather balloon climbing, then falling. Renders come from the
+samples, set into the photo of the frame (docs/images/frame.jpg) where its screen is, in the
+panel's own grays.
 
 Usage: uv run --python 3.12 --with pillow --with numpy --with requests python tools/hero.py [out.gif]
-Takes a few minutes: every frame is a real render.
+Every frame is a real render, in order in one process as on the Kindle: a pass is found once,
+before it starts, and its numbers hold still while it crosses.
 """
 
+import argparse
 import json
 import os
-import subprocess
 import sys
 import tempfile
 
@@ -17,6 +19,11 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+sys.path.insert(0, os.path.join(ROOT, "sky"))
+import base  # noqa: E402
+
+import sky  # noqa: E402
+
 SAMPLES = os.path.join(ROOT, "sky", "samples")
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "docs", "images", "hero.gif")
 FPS_MS = 40
@@ -29,13 +36,16 @@ INK = np.array([50, 45, 41], float)
 SAFE = [16, 34, 1302, 1030]
 
 
-def render(sample, t, cfg):
-    out = os.path.join(TMP, "%s-%d.png" % (sample, t))
-    if not os.path.exists(out):
-        subprocess.check_call([sys.executable, os.path.join(ROOT, "sky", "sky.py"), "--sample",
-                               os.path.join(SAMPLES, sample + ".json"), "--time", str(t), "--rotate", "0",
-                               "--config", cfg, "--out", out], stdout=subprocess.DEVNULL)
-    return Image.open(out).convert("L").crop(SAFE)
+def render(sample, t):
+    with open(os.path.join(SAMPLES, sample + ".json")) as f:
+        data = json.load(f)
+    return sky.render(data, t)[0].convert("L").crop(SAFE)
+
+
+def pass_end(sample, t):
+    """When the ISS pass that's coming at `t` sets."""
+    with open(os.path.join(SAMPLES, sample + ".json")) as f:
+        return sky.build(json.load(f), t)["pass"]["set"]
 
 
 def coeffs(src, dst):
@@ -78,25 +88,28 @@ def partial(old, new, n=4):
 
 
 def main():
-    global TMP
-    TMP = tempfile.mkdtemp()
     with open(os.path.join(ROOT, "sky", "config.json")) as f:
         cfg = dict(json.load(f), safe=SAFE)
-    cfg_path = os.path.join(TMP, "config.json")
+    cfg_path = os.path.join(tempfile.mkdtemp(), "config.json")
     with open(cfg_path, "w") as f:
         json.dump(cfg, f)
+    base.load_config(argparse.Namespace(config=cfg_path, heading=None, rotate=0))
+    sky.layout()
     plate = Image.open(os.path.join(ROOT, "docs", "images", "frame.jpg")).convert("RGB")
 
     evening = 1790465100                  # the iss_soon sample: 7:25 pm, ISS overhead at 8:01
     moon = 1790400600                     # the late_moon sample: 1:30 am, the Harvest Moon
+    first = render("iss_soon", evening)
+    # From a minute before it rises to the moment it sets, every 20 s (the Kindle's every 15 s,
+    # plugged in), 11 frames each
+    rise, sets = evening + 34 * 60, pass_end("iss_soon", evening)
     scenes = [
-        ("hold", [render("iss_soon", evening, cfg_path)], 100),
-        # Plugged in, a pass redraws every 15 seconds; here every 20 of them, 11 frames each
-        ("change", [render("iss_soon", evening + 34 * 60 + 20 * i, cfg_path) for i in range(19)], 11),
-        ("change", [render("late_moon", moon, cfg_path)], 70),
+        ("hold", [first], 100),
+        ("change", [render("iss_soon", tt) for tt in range(rise, int(sets) + 1, 20)], 11),
+        ("change", [render("late_moon", moon)], 70),
         # The morning's weather balloon from Buffalo, climbing, then falling after it bursts
-        ("change", [render("day", 1790339100, cfg_path)], 70),
-        ("partial", [render("balloon_burst", 1790341920, cfg_path)], 70),
+        ("change", [render("day", 1790339100)], 70),
+        ("partial", [render("balloon_burst", 1790341920)], 70),
     ]
     screens, last = [], None
     for how, imgs, hold in scenes:

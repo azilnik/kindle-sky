@@ -672,7 +672,9 @@ def draw_dome(img, d, sky):
                    (xb + 32 * size * math.cos(ang + 2.4), yb + 32 * size * math.sin(ang + 2.4)),
                    (xb + 32 * size * math.cos(ang - 2.4), yb + 32 * size * math.sin(ang - 2.4))], fill=fill)
         if not any(th["kind"] == "station" and th["name"] == lead for th in up):
-            x, y = pts[0][1]
+            # Before the pass it's named where it'll rise; once under way, where it's got to,
+            # since it can drop out of sight (into the haze, or Earth's shadow) before it sets
+            x, y = flown[-1] if flown else pts[0][1]
             labels.append((main, x, y, 26, lead, BLABEL, fill, 0, []))
 
     # Compass letters on the horizon, in a gap cut in the line (and in any path running
